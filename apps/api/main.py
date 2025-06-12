@@ -1,7 +1,6 @@
 from fastapi import FastAPI
+from apps.api.routes import router
 
-app = FastAPI()
+app = FastAPI(title="Youon Intelligence API")
 
-@app.get("/")
-def read_root():
-    return {"message": "Youon Intelligence API"}
+app.include_router(router)

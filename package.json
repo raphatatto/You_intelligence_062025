@@ -1,0 +1,32 @@
+{
+  "name": "you_intelligence_062025",
+  "version": "1.0.0",
+  "description": "Plataforma de inteligência comercial e técnica para o setor de energia, focada em mapeamento de mercado, enriquecimento de leads e insights estratégicos para os produtos da You.On (Arbitragem, Backup, GTD, etc).",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "prisma:pull": "prisma db pull",
+    "prisma:generate": "prisma generate",
+    "prisma:studio": "prisma studio",
+    "start:api": "uvicorn apps.api.main:app --reload",
+    "test": "pytest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GuilhermeCostaProenca/You_intelligence_062025.git"
+  },
+  "keywords": [],
+  "author": "Guilherme Costa Proença",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/GuilhermeCostaProenca/You_intelligence_062025/issues"
+  },
+  "homepage": "https://github.com/GuilhermeCostaProenca/You_intelligence_062025#readme",
+  "prisma": {
+    "schema": "packages/database/prisma/schema.prisma"
+  }
+}
