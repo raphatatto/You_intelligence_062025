@@ -160,3 +160,12 @@ model teste {
   nome  String? @db.VarChar
   idade Int?
 }
+
+model import_status {
+  distribuidora String
+  ano           Int
+  status        String   @default("pending")
+  data_execucao DateTime @default(now())
+
+  @@id([distribuidora, ano])
+}

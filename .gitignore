@@ -1,0 +1,63 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg
+*.egg-info/
+*.pyo
+*.pyd
+*.log
+
+# Virtualenvs
+.venv/
+env/
+ENV/
+venv/
+*.env
+.env
+.env.*
+
+# Node (Frontend - Next.js + Tailwind)
+node_modules
+
+# Build
+dist/
+build/
+*.egg-info
+*.so
+
+# Data (dados locais)
+data/downloads/
+data/processed/
+
+# Arquivos sensíveis
+*.key
+*.pem
+
+# Docker
+*.pid
+*.pid.lock
+
+# Airflow
+airflow.db
+airflow.cfg
+*.airflow
+logs/
+
+# Pytest / Coverage
+.cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# MyPy / Ruff / Linters
+.mypy_cache/
+.pytest_cache/
+ruff_cache/
+.dmypy.json
+
+# IDEs
+.idea/
+*.iml
+*.swp
+.DS_Store
+Thumbs.db
