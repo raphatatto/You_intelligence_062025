@@ -3,6 +3,7 @@
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { MapPin } from 'lucide-react';
+import {Lead} from '@/app/types/lead'; 
 
 
 import Map, {
@@ -13,25 +14,14 @@ import Map, {
 
 import {useState} from 'react';
 
-// ---------- tipos ----------
-export type Lead = {
-  id: string;
-  nome: string;
-  lng: number;
-  lat: number;
-  status: 'novo' | 'qualificado' | 'contato';
-};
 
-// ---------- props ----------
 type Props = {
   leads: Lead[];
 };
 
-// ---------- style ----------
 const MAP_STYLE =
   'https://tiles.stadiamaps.com/styles/alidade_smooth_dark.json';
 
-// ---------- componente ----------
 export default function MapView({leads}: Props) {
   const [selecionado, setSelecionado] = useState<Lead | null>(null);
 
@@ -50,9 +40,16 @@ export default function MapView({leads}: Props) {
       longitude={l.lng}
       latitude={l.lat}
       anchor="bottom"
-      onClick={() => setSelecionado(l)}
+      draggable={false}
+    >
+    <div
+      onMouseEnter={() => setSelecionado(l)}
+      onMouseLeave={() => setSelecionado(null)}
+      onClick={() => setSelecionado(l)}    
+      className="cursor-pointer"           
     >
       <MapPin className="w-6 h-6 text-red-600 drop-shadow-lg" />
+      </div>
     </Marker>
   ))}
       {selecionado && (
@@ -60,7 +57,7 @@ export default function MapView({leads}: Props) {
           longitude={selecionado.lng}
           latitude={selecionado.lat}
           anchor="top"
-          onClose={() => setSelecionado(null)}
+          closeButton={false}
           offset={[0, 10]}
         >
           <p className="text-sm font-semibold">{selecionado.nome}</p>

@@ -1,18 +1,18 @@
-import MapView from '@/components/mapa/MapView';
-import type {Lead} from '../types/lead';
+'use client';
 
-const leads: Lead[] = [
-  {id: '1', nome: 'Acme Ltda', lng: -23.724198, lat: -46.714637, status: 'qualificado'},
-  {id: '2', nome: 'Beta S.A.', lng: -51.18, lat: -30.05, status: 'novo'},
-];
+import MapView      from '@/components/mapa/MapView';
+import { useLeads } from '@/services/leads';
 
 export default function MapaPage() {
+  // se quiser filtros, componha query string aqui e passe pra useLeads(qs)
+  const { data: leads, isLoading, error } = useLeads();
+
+  if (isLoading) return <p className="p-4">Carregando…</p>;
+  if (error)     return <p className="p-4 text-red-600">Falha ao buscar dados.</p>;
+
   return (
     <div className="h-screen">
-      <MapView leads={leads} />
+      <MapView leads={leads ?? []} />
     </div>
   );
 }
-
-
-//-23.724198, -46.714637
