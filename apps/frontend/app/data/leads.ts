@@ -8,7 +8,7 @@ export const mockLeads: SerieLeads[] = [
   {dia: '04', leads: 9},
 ];
 
-export const leads: Lead[] = [
-  {id: '1', nome: 'Acme Ltda', lng: -23.724198, lat: -46.714637, status: 'qualificado'},
-  {id: '2', nome: 'Beta S.A.', lng: -51.18, lat: -30.05, status: 'novo'},
+export const leadsMock: Lead[] = [
+  { id: "1", nome: 'ABC', lat: -23.54, lng: -46.63, dic: "2", fic: "1"},
+  { id: "2", nome: 'Beta', lat: -30.05, lng: -51.18,  dic: "1", fic: "2"},
 ];

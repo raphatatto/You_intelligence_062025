@@ -3,9 +3,10 @@ export type Lead = {
   nome: string;
   lng: number;
   lat: number;
-  status: 'novo' | 'qualificado' | 'contato';
-  regiao: 'Norte' | 'Nordeste' | 'Centro-Oeste' | 'Sudeste' | 'Sul';
-  estado: string;
-  cidade: string;
-  solucao: 'Solar' | 'Arbitragem' | 'Backup' | 'PeakShaving' | 'Outros';
-};
+  dic: string;
+  fic: string;
+  solucao?: string;
+  status?: string;
+  potencial?: string;
+  regiao?: string;
+}
