@@ -162,10 +162,10 @@ model teste {
 }
 
 model import_status {
-  distribuidora String
+  distribuidora String    @db.VarChar(255)
   ano           Int
-  status        String   @default("pending")
-  data_execucao DateTime @default(now())
+  status        String?   @default("pending") @db.VarChar
+  data_execucao DateTime? @default(now()) @db.Timestamptz(6)
 
   @@id([distribuidora, ano])
 }
