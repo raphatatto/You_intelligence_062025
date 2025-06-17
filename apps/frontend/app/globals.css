@@ -1,29 +1,54 @@
+
 @import "tailwindcss";
 
-
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+
+  --youon-primary:   #b3d430;   
+  --youon-surface:   #0f0f0f;   
+  --youon-onsurface: #171717;   
+
+  --font-sans: var(--font-geist-sans, ui-sans-serif, system-ui);
+  --font-mono: var(--font-geist-mono, ui-monospace, monospace);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #00000;
+    --youon-surface:   #0a0a0a;
+    --youon-onsurface: #0f0f0f;
   }
 }
 
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@theme inline {
+  --color-background: var(--youon-surface);
+  --color-foreground: var(--youon-onsurface);
+  --color-primary:    var(--youon-primary);
+  --font-sans:        var(--font-sans);
+  --font-mono:        var(--font-mono);
 }
 
+html, body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--youon-surface);
+  color: var(--youon-onsurface);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+  padding: 1rem;
+  box-shadow: 0 4px 10px #0005;
+}
+
+/* utilitário para links/ícones primários */
+.text-primary { color: var(--youon-primary); }
+.bg-primary   { background: var(--youon-primary); }
