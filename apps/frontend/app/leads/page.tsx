@@ -42,7 +42,7 @@ export default function LeadsPage() {
 
   return (
     <section className="space-y-6 p-6">
-      <h1 className="text-2xl font-bold">
+      <h1 className="text-2xl font-bold text-white">
         Leads ({rows.length})
       </h1>
       <FiltersBar estados={estados} />

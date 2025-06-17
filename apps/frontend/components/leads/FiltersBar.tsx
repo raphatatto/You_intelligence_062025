@@ -1,25 +1,21 @@
-// components/leads/FiltersBar.tsx
 'use client';
 
-import { useFilters } from '@/store/filters'; // ← só UF
-import { useSort, SortKey } from '@/store/sort'; // ← ordenação
+import { useFilters } from '@/store/filters';
+import { useSort, SortKey } from '@/store/sort';
 
 export default function FiltersBar({ estados }: { estados: string[] }) {
-  /* estado (UF) */
   const { estado, setEstado } = useFilters();
-
-  /* ordenação DIC / FIC */
   const { order, setOrder } = useSort();
 
   return (
-    <div className="flex flex-wrap gap-6 bg-white p-4 rounded-xl shadow">
+    <div className="flex flex-wrap items-center gap-6 rounded-xl border border-zinc-700 bg-zinc-900 p-4 shadow-md">
       {/* ────────────── seletor de UF ────────────── */}
-      <label className="text-sm flex items-center gap-2">
+      <label className="text-sm flex items-center gap-2 text-zinc-300">
         <span>Estado:</span>
         <select
           value={estado}
           onChange={(e) => setEstado(e.target.value)}
-          className="border rounded px-2 py-1"
+          className="rounded border border-zinc-600 bg-zinc-800 px-2 py-1 text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-lime-500"
         >
           <option value="">Todos</option>
           {estados.map((uf) => (
@@ -31,12 +27,12 @@ export default function FiltersBar({ estados }: { estados: string[] }) {
       </label>
 
       {/* ────────────── seletor de ordenação ────────────── */}
-      <label className="text-sm flex items-center gap-2">
+      <label className="text-sm flex items-center gap-2 text-zinc-300">
         <span>Ordenar por:</span>
         <select
           value={order}
           onChange={(e) => setOrder(e.target.value as SortKey)}
-          className="border rounded px-2 py-1"
+          className="rounded border border-zinc-600 bg-zinc-800 px-2 py-1 text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-lime-500"
         >
           <option value="none">–</option>
           <option value="dic-asc">DIC ↑</option>

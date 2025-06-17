@@ -17,7 +17,7 @@ const links = [
   { href: '/',        label: 'Home',             icon: Home },
   { href: '/dashboard',label: 'Dashboard',       icon: LayoutDashboard },
   { href: '/mapa',    label: 'Mapa interativo',  icon: MapPinned },
-  { href: '/dados',   label: 'Dados',            icon: BarChart2 },
+  { href: '/leads',   label: 'Dados',            icon: BarChart2 },
   { href: '/noticias',label: 'Notícias',         icon: Newspaper },
 ];
 

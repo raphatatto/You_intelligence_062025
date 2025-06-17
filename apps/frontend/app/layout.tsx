@@ -9,8 +9,7 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
     <html lang="pt-BR">
       <body className="flex">
         <Sidebar />
-        <main className="ml-56 flex-1 min-h-screen bg-black-50 p-6">
-          background: var(--youon-surface);
+        <main className="ml-56 flex-1 min-h-screen bg-black p-6 ">
           {children}
         </main>
       </body>

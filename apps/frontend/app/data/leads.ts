@@ -32,6 +32,7 @@ const raw: Lead[] = [
     descricao: 'Empresa Beta localizada no Rio Grande do Sul, especializada em soluções de energia solar.',
     CNAE: '3511-3/01',
   },
+
 ];
 export const leadsMock = enrichLeads(raw);
 
