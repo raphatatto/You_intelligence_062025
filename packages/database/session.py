@@ -2,7 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sess
 from apps.api.config import get_settings
 
 settings = get_settings()
-engine = create_async_engine(settings.postgres_dsn, echo=False, pool_pre_ping=True)
+engine = create_async_engine(settings.dsn, echo=False, pool_pre_ping=True)
 SessionLocal: async_sessionmaker[AsyncSession] = async_sessionmaker(
     bind=engine, expire_on_commit=False
 )
