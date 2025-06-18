@@ -1,101 +1,106 @@
-import geopandas as gpd
+#!/usr/bin/env python3
+import io
 from pathlib import Path
 from datetime import datetime
+
+import geopandas as gpd
+import pandas as pd
+from fiona import listlayers
+
 from packages.database.connection import get_db_cursor
 
-def parse_data_conexao(raw_data):
-    if isinstance(raw_data, str):
-        for fmt in ("%d/%m/%Y", "%Y-%m-%d"):
-            try:
-                return datetime.strptime(raw_data.strip(), fmt).date()
-            except ValueError:
-                continue
-    elif isinstance(raw_data, datetime):
-        return raw_data.date()
-    return None
 
-def importar_ucmt(gdb_folder: Path, distribuidora: str, ano: int):
-    camada = "UCMT_tab"
-    gdb_path = gdb_folder
-    print(f"📥 Lendo camada '{camada}' da GDB '{gdb_path.name}'")
-    df = gpd.read_file(gdb_path, layer=camada)
-    total = 0
-    total_linhas = len(df)
+def _coerce_date(val):
+    if pd.isna(val):
+        return None
+    s = str(val).strip()
+    if s.upper() in {"YEL", "N/A", "NULO", "NULL", "SEM DADO", ""}:
+        return None
+    try:
+        return pd.to_datetime(s, dayfirst=True, errors="coerce").date()
+    except Exception:
+        return None
 
-    batch_bruto, batch_energia, batch_demanda, batch_qualidade = [], [], [], []
-    BATCH_SIZE = 500
 
-    def flush_batches(cur):
-        if batch_bruto:
-            cur.executemany("""
-                INSERT INTO lead_bruto (
-                    id, id_interno, cnae, grupo_tensao, modalidade,
-                    tipo_sistema, situacao, distribuidora, origem,
-                    status, data_conexao, classe, segmento,
-                    subestacao, municipio_ibge, bairro, cep,
-                    pac, pn_con, sit_atv
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT (id) DO NOTHING
-            """, batch_bruto)
-            batch_bruto.clear()
-        if batch_energia:
-            cur.executemany("""
-                INSERT INTO lead_energia (id, lead_id, ene, potencia)
-                VALUES (%s, %s, %s, %s)
-                ON CONFLICT (id) DO NOTHING
-            """, batch_energia)
-            batch_energia.clear()
-        if batch_demanda:
-            cur.executemany("""
-                INSERT INTO lead_demanda (id, lead_id, dem_ponta, dem_fora_ponta)
-                VALUES (%s, %s, %s, %s)
-                ON CONFLICT (id) DO NOTHING
-            """, batch_demanda)
-            batch_demanda.clear()
-        if batch_qualidade:
-            cur.executemany("""
-                INSERT INTO lead_qualidade (id, lead_id, dic, fic)
-                VALUES (%s, %s, %s, %s)
-                ON CONFLICT (id) DO NOTHING
-            """, batch_qualidade)
-            batch_qualidade.clear()
+def _to_pg_array(data):
+    def fmt(lst):
+        return "{" + ",".join(map(str, lst)) + "}" if len(lst) > 0 else r"\N"
+    if isinstance(data, pd.Series):
+        return data.apply(fmt)
+    return [fmt(lst) for lst in data]
+
+
+def _copy_df(df, table, cur):
+    buf = io.StringIO()
+    df.to_csv(buf, index=False, header=False, na_rep="\\N")
+    buf.seek(0)
+    cur.copy_expert(f"COPY {table} FROM STDIN WITH (FORMAT csv, NULL '\\N')", buf)
+
+
+def importar_ucmt(gdb: Path, distribuidora: str, ano: int):
+    layer = "UCMT_tab"
+    if layer not in listlayers(gdb):
+        print(f"⚠️  Camada {layer} não encontrada em {gdb.name}. Pulando.")
+        return
+
+    print(f"📥 Lendo camada '{layer}' de {gdb.name}...")
+    df = gpd.read_file(gdb, layer=layer)
+    df["data_conexao"] = df["DAT_CON"].apply(_coerce_date).fillna(pd.NaT)
+
+    dem_p = [col for col in df.columns if col.startswith("DEM_P_")]
+    dem_f = [col for col in df.columns if col.startswith("DEM_F_")]
+    ene_p = [col for col in df.columns if col.startswith("ENE_P_")]
+    ene_f = [col for col in df.columns if col.startswith("ENE_F_")]
+    dic_cols = [col for col in df.columns if col.startswith("DIC_")]
+    fic_cols = [col for col in df.columns if col.startswith("FIC_")]
+
+    df_bruto = pd.DataFrame({
+        "id": df["COD_ID"],
+        "id_interno": df["COD_ID"],
+        "cnae": df["CNAE"],
+        "grupo_tensao": df["GRU_TEN"],
+        "modalidade": df["GRU_TAR"],
+        "tipo_sistema": df["TIP_SIST"],
+        "situacao": df["SIT_ATIV"],
+        "distribuidora": distribuidora,
+        "origem": layer.lower(),
+        "status": "raw",
+        "data_conexao": df["data_conexao"],
+        "classe": df["CLAS_SUB"],
+        "segmento": df["CONJ"],
+        "subestacao": df["SUB"],
+        "municipio_ibge": df["MUN"],
+        "bairro": df["BRR"],
+        "cep": df["CEP"],
+        "pac": df["PAC"],
+        "pn_con": df["PN_CON"],
+    })
+
+    df_dem = pd.DataFrame({
+        "id": df["COD_ID"],
+        "lead_id": df["COD_ID"],
+        "dem_ponta": _to_pg_array(df[dem_p].fillna(0).values),
+        "dem_fora_ponta": _to_pg_array(df[dem_f].fillna(0).values),
+    })
+
+    df_ene = pd.DataFrame({
+        "id": df["COD_ID"],
+        "lead_id": df["COD_ID"],
+        "ene": _to_pg_array((df[ene_p].fillna(0).values + df[ene_f].fillna(0).values)),
+        "potencia": df["DEM_CONT"].fillna(0).astype(float),
+    })
+
+    df_q = pd.DataFrame({
+        "id": df["COD_ID"],
+        "lead_id": df["COD_ID"],
+        "dic": _to_pg_array(df[dic_cols].fillna(0).values),
+        "fic": _to_pg_array(df[fic_cols].fillna(0).values),
+    })
 
     with get_db_cursor(commit=True) as cur:
-        for i, (_, row) in enumerate(df.iterrows(), start=1):
-            try:
-                id_lead = row.get("COD_ID")
-                status = "raw"
-                origem = camada.lower()
-                data_conexao = parse_data_conexao(row.get("DAT_CON"))
+        _copy_df(df_bruto, "lead_bruto", cur)
+        _copy_df(df_dem, "lead_demanda", cur)
+        _copy_df(df_ene, "lead_energia", cur)
+        _copy_df(df_q, "lead_qualidade", cur)
 
-                batch_bruto.append((
-                    id_lead, id_lead,
-                    row.get("CNAE"), row.get("GRU_TEN"), row.get("GRU_TAR"),
-                    row.get("TIP_SIST"), row.get("SIT_ATIV"),
-                    distribuidora, origem, status, data_conexao,
-                    row.get("CLAS_SUB"), row.get("CONJ"), row.get("SUB"),
-                    row.get("MUN"), row.get("BRR"), row.get("CEP"),
-                    row.get("PAC"), row.get("PN_CON"), row.get("SIT_ATV")
-                ))
-
-                ene = [int(row.get(f"ENE_{str(m).zfill(2)}") or 0) for m in range(1, 13)]
-                batch_energia.append((id_lead, id_lead, ene, float(row.get("DEM_CONT") or 0)))
-
-                demanda = [int(row.get(f"DEM_{str(m).zfill(2)}") or 0) for m in range(1, 13)]
-                batch_demanda.append((id_lead, id_lead, [], demanda))
-
-                dic = [int(row.get(f"DIC_{str(m).zfill(2)}") or 0) for m in range(1, 13)]
-                fic = [int(row.get(f"FIC_{str(m).zfill(2)}") or 0) for m in range(1, 13)]
-                batch_qualidade.append((id_lead, id_lead, dic, fic))
-
-                total += 1
-                if total % BATCH_SIZE == 0:
-                    flush_batches(cur)
-                    print(f"🧮 Progresso: {total}/{total_linhas} registros processados...")
-
-            except Exception as err:
-                print(f"⚠️  Erro ao importar linha {id_lead}: {err}")
-                continue
-
-        flush_batches(cur)
-    print(f"✅ {total} registros de '{camada}' inseridos para {distribuidora.upper()} - {ano}")
+    print(f"✅ UCMT {distribuidora.upper()} {ano}: {len(df)} registros inseridos!")

@@ -1,104 +1,97 @@
-import geopandas as gpd
+#!/usr/bin/env python3
+import sys
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+
+import io
 from datetime import datetime
+from typing import Sequence, Any
+import geopandas as gpd
+import pandas as pd
+from fiona import listlayers
+
 from packages.database.connection import get_db_cursor
 
-def parse_data_conexao(raw_data):
-    if isinstance(raw_data, str):
-        for fmt in ("%d/%m/%Y", "%Y-%m-%d"):
-            try:
-                return datetime.strptime(raw_data.strip(), fmt).date()
-            except ValueError:
-                continue
-    elif isinstance(raw_data, datetime):
-        return raw_data.date()
-    return None
 
-def importar_ucat(gdb_folder: Path, distribuidora: str, ano: int):
-    camada = "UCAT_tab"
-    gdb_path = gdb_folder
-    print(f"📥 Lendo camada '{camada}' da GDB '{gdb_path.name}'")
-    df = gpd.read_file(gdb_path, layer=camada)
-    total = 0
-    total_linhas = len(df)
+def _to_pg_array(data: Sequence[Sequence[Any]] | pd.Series) -> list[str] | pd.Series:
+    def fmt(lst): return "{" + ",".join(map(str, lst)) + "}" if len(lst) > 0 else r"\N"
+    return data.apply(fmt) if isinstance(data, pd.Series) else [fmt(lst) for lst in data]
 
-    batch_bruto, batch_demanda, batch_energia, batch_qualidade = [], [], [], []
-    BATCH_SIZE = 500
 
-    def flush_batches(cur):
-        if batch_bruto:
-            cur.executemany("""
-                INSERT INTO lead_bruto (
-                    id, id_interno, cnae, grupo_tensao, modalidade,
-                    tipo_sistema, situacao, distribuidora, origem,
-                    status, data_conexao, classe, segmento,
-                    subestacao, municipio_ibge, bairro, cep,
-                    pac, pn_con, sit_atv
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT (id) DO NOTHING
-            """, batch_bruto)
-            batch_bruto.clear()
-        if batch_demanda:
-            cur.executemany("""
-                INSERT INTO lead_demanda (id, lead_id, dem_ponta, dem_fora_ponta)
-                VALUES (%s, %s, %s, %s)
-                ON CONFLICT (id) DO NOTHING
-            """, batch_demanda)
-            batch_demanda.clear()
-        if batch_energia:
-            cur.executemany("""
-                INSERT INTO lead_energia (id, lead_id, ene, potencia)
-                VALUES (%s, %s, %s, %s)
-                ON CONFLICT (id) DO NOTHING
-            """, batch_energia)
-            batch_energia.clear()
-        if batch_qualidade:
-            cur.executemany("""
-                INSERT INTO lead_qualidade (id, lead_id, dic, fic)
-                VALUES (%s, %s, %s, %s)
-                ON CONFLICT (id) DO NOTHING
-            """, batch_qualidade)
-            batch_qualidade.clear()
+def _copy_df(df: pd.DataFrame, table: str, cur) -> None:
+    buf = io.StringIO()
+    df.to_csv(buf, index=False, header=False, na_rep=r"\N")
+    buf.seek(0)
+    cur.copy_expert(f"COPY {table} FROM STDIN WITH (FORMAT csv, NULL '\\N')", buf)
+
+
+def importar_ucat(gdb: Path, distribuidora: str, ano: int):
+    layer = "UCAT_tab"
+    if layer not in listlayers(gdb):
+        print(f"⚠️  Camada {layer} não encontrada em {gdb.name}. Pulando.")
+        return
+
+    print(f"📥 Lendo ‘{layer}’ em {gdb.name}…")
+    df = gpd.read_file(gdb, layer=layer)
+
+    # 🔧 Forçando a data para 2023-01-01
+    df["data_conexao"] = pd.to_datetime("2023-01-01").date()
+
+    dem_p = [c for c in df.columns if c.startswith("DEM_P_")]
+    dem_f = [c for c in df.columns if c.startswith("DEM_F_")]
+    ene_p = [c for c in df.columns if c.startswith("ENE_P_")]
+    ene_f = [c for c in df.columns if c.startswith("ENE_F_")]
+    dic = [c for c in df.columns if c.startswith("DIC_")]
+    fic = [c for c in df.columns if c.startswith("FIC_")]
+
+    df_bruto = pd.DataFrame({
+    "id": df["COD_ID"],
+    "id_interno": df["COD_ID"],
+    "cnae": df.get("CNAE"),
+    "grupo_tensao": df.get("GRU_TEN"),
+    "modalidade": df.get("GRU_TAR"),
+    "tipo_sistema": df.get("TIP_SIST"),
+    "situacao": df.get("SIT_ATIV"),
+    "distribuidora": distribuidora,
+    "origem": layer.lower(),
+    "status": "raw",
+    "data_conexao": pd.Series([pd.Timestamp("2023-01-01")] * len(df)),
+    "classe": df.get("CLAS_SUB"),
+    "segmento": df.get("CONJ"),
+    "subestacao": df.get("SUB"),
+    "municipio_ibge": df.get("MUN"),
+    "bairro": df.get("BRR"),
+    "cep": df.get("CEP"),
+    "pac": df.get("PAC"),
+    "pn_con": df.get("PN_CON"),
+})
+
+
+    df_demanda = pd.DataFrame({
+        "id": df["COD_ID"],
+        "lead_id": df["COD_ID"],
+        "dem_ponta": _to_pg_array(df[dem_p].fillna(0).values),
+        "dem_fora_ponta": _to_pg_array(df[dem_f].fillna(0).values),
+    })
+
+    df_energia = pd.DataFrame({
+        "id": df["COD_ID"],
+        "lead_id": df["COD_ID"],
+        "ene": _to_pg_array((df[ene_p].fillna(0).values + df[ene_f].fillna(0).values)),
+        "potencia": df["DEM_CONT"].fillna(0).astype(float),
+    })
+
+    df_q = pd.DataFrame({
+        "id": df["COD_ID"],
+        "lead_id": df["COD_ID"],
+        "dic": _to_pg_array(df[dic].fillna(0).values),
+        "fic": _to_pg_array(df[fic].fillna(0).values),
+    })
 
     with get_db_cursor(commit=True) as cur:
-        for i, (_, row) in enumerate(df.iterrows(), start=1):
-            try:
-                id_lead = row.get("COD_ID")
-                status = "raw"
-                origem = camada.lower()
-                data_conexao = parse_data_conexao(row.get("DAT_CON"))
+        _copy_df(df_bruto, "lead_bruto", cur)
+        _copy_df(df_demanda, "lead_demanda", cur)
+        _copy_df(df_energia, "lead_energia", cur)
+        _copy_df(df_q, "lead_qualidade", cur)
 
-                batch_bruto.append((
-                    id_lead, id_lead,
-                    row.get("CNAE"), row.get("GRU_TEN"), row.get("GRU_TAR"),
-                    row.get("TIP_SIST"), row.get("SIT_ATIV"),
-                    distribuidora, origem, status, data_conexao,
-                    row.get("CLAS_SUB"), row.get("CONJ"), row.get("SUB"),
-                    row.get("MUN"), row.get("BRR"), row.get("CEP"),
-                    row.get("PAC"), row.get("PN_CON"), row.get("SIT_ATV")
-                ))
-
-                dem_ponta = [int(row.get(f"DEM_P_{str(m).zfill(2)}") or 0) for m in range(1, 13)]
-                dem_fora = [int(row.get(f"DEM_F_{str(m).zfill(2)}") or 0) for m in range(1, 13)]
-                batch_demanda.append((id_lead, id_lead, dem_ponta, dem_fora))
-
-                ene_p = [int(row.get(f"ENE_P_{str(m).zfill(2)}") or 0) for m in range(1, 13)]
-                ene_f = [int(row.get(f"ENE_F_{str(m).zfill(2)}") or 0) for m in range(1, 13)]
-                ene = [p + f for p, f in zip(ene_p, ene_f)]
-                batch_energia.append((id_lead, id_lead, ene, float(row.get("DEM_CONT") or 0)))
-
-                dic = [int(row.get(f"DIC_{str(m).zfill(2)}") or 0) for m in range(1, 13)]
-                fic = [int(row.get(f"FIC_{str(m).zfill(2)}") or 0) for m in range(1, 13)]
-                batch_qualidade.append((id_lead, id_lead, dic, fic))
-
-                total += 1
-                if total % BATCH_SIZE == 0:
-                    flush_batches(cur)
-                    print(f"🧮 Progresso: {total}/{total_linhas} registros processados...")
-
-            except Exception as err:
-                print(f"⚠️  Erro ao importar linha {id_lead}: {err}")
-                continue
-
-        flush_batches(cur)
-    print(f"✅ {total} registros de '{camada}' inseridos para {distribuidora.upper()} - {ano}")
+    print(f"✅ UCAT {distribuidora.upper()}-{ano}: {len(df)} registros inseridos.")
