@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from packages.database.session import get_session
-from apps.api.schemas.lead import LeadList, LeadBase, LeadDetail
+from apps.api.schemas.lead import LeadList, LeadBase, LeadDetail, LeadMapOut, LeadResumo
 from apps.api.services import lead_service
 
 router = APIRouter(prefix="/leads", tags=["leads"])
@@ -37,3 +37,22 @@ async def heatmap(
     para colocar círculos no mapa.
     """
     return await lead_service.heatmap_points(db, segment)
+
+
+@router.get("/map/points", response_model=list[LeadMapOut])
+async def get_lead_points(
+    status: str | None = Query(None),
+    distribuidora: str | None = Query(None),
+    limit: int = Query(default=1000),
+    db: AsyncSession = Depends(get_session)
+):
+    return await lead_service.get_map_points(db, status, distribuidora, limit)
+
+@router.get("/resumo", response_model=LeadResumo)
+async def resumo(
+    estado: str | None = Query(None),
+    municipio: str | None = Query(None),
+    segmento: str | None = Query(None),
+    db: AsyncSession = Depends(get_session)
+):
+    return await lead_service.get_resumo(db, estado, municipio, segmento)

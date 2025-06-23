@@ -21,3 +21,23 @@ class LeadDetail(LeadBase):
 class LeadList(BaseModel):
     total: int
     items: list[LeadBase]
+
+class LeadMapOut(BaseModel):
+    id: str
+    latitude: float
+    longitude: float
+    classe: str | None = None
+    subgrupo: str | None = None
+    potencia: float | None = None
+    distribuidora: str | None = None
+    status: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+class LeadResumo(BaseModel):
+    total_leads: int
+    total_com_cnpj: int
+    total_enriquecidos: int
+    media_consumo: float | None
+    media_potencia: float | None
+    por_classe: dict[str, int]
