@@ -20,15 +20,16 @@ class Settings(BaseSettings):
         env_file = ".env"
         env_file_encoding = "utf-8"
 
-    @property
-    def dsn(self) -> str:
-        if self.postgres_dsn:                # prioriza a DSN pronta, se existir
-            return self.postgres_dsn
-        # monta automaticamente usando as DB_*
-        return (
-            f"postgresql+asyncpg://{quote(self.db_user)}:{quote(self.db_pass)}"
-            f"@{self.db_host}:{self.db_port}/{self.db_name}?sslmode=require"
-        )
+@property
+def dsn(self) -> str:
+    if self.postgres_dsn:
+        return self.postgres_dsn
+    return (
+        f"postgresql+asyncpg://{quote(self.db_user)}:{quote(self.db_pass)}"
+        f"@{self.db_host}:{self.db_port}/{self.db_name}"
+    )
+
+
 
 @lru_cache
 def get_settings() -> Settings:

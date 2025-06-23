@@ -45,12 +45,8 @@ async def rodar_importacoes():
             for base, config in BASES.items():
                 print(f"🔄 Iniciando importação: {base} | {dist_nome} {ano}")
                 try:
-                    await config["main"](
-                        gdb_path=gdb,
-                        distribuidora=dist_nome,
-                        ano=ano,
-                        camada=config["layer"]
-                    )
+                    config["main"](gdb_path=gdb, distribuidora=dist_nome, ano=ano, camada=config["layer"])
+
                 except Exception as e:
                     print(f"❌ Erro em {base} - {dist_nome}: {e}")
 
