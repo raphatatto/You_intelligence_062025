@@ -15,4 +15,6 @@ export type Lead = {
 
   descricao: string;
   CNAE?: string;
+  codigoDistribuidora: number;
+
 };

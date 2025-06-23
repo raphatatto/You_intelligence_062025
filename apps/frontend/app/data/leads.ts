@@ -20,6 +20,7 @@ const raw: Lead[] = [
     ficMes: [4, 2, 3, 2, 2, 2, 3, 4, 3, 3, 2, 2],
     descricao: 'Empresa Beta localizada em São Paulo, especializada em soluções de energia solar.',
     CNAE: '3511-3/01',
+    codigoDistribuidora: 1001,
   },
   {
     id: 2,
@@ -31,8 +32,34 @@ const raw: Lead[] = [
     ficMes: [2, 2, 3, 2, 2, 2, 3, 4, 3, 3, 2, 2],
     descricao: 'Empresa Beta localizada no Rio Grande do Sul, especializada em soluções de energia solar.',
     CNAE: '3511-3/01',
+    codigoDistribuidora: 1001,
+  },
+   {
+    id: 3,
+    nome: 'Beta (RS)',
+    lat: -36.05,
+    lng: -51.18,
+    estado: 'RJ',
+    dicMes: [2.0, 1.1, 1.4, 1.2, 1.3, 1.2, 1.5, 1.6, 1.4, 1.3, 1.2, 1.1],
+    ficMes: [2, 2, 3, 2, 2, 2, 3, 4, 3, 3, 2, 2],
+    descricao: 'Empresa Beta localizada no Rio Grande do Sul, especializada em soluções de energia solar.',
+    CNAE: '3511-3/01',
+    codigoDistribuidora: 1002,
+  },
+     {
+    id: 4,
+    nome: 'Beta (RS)',
+    lat: -35.05,
+    lng: -51.18,
+    estado: 'SP',
+    dicMes: [2.0, 1.1, 1.4, 1.2, 1.3, 1.2, 1.5, 1.6, 1.4, 1.3, 1.2, 1.1],
+    ficMes: [2, 2, 3, 2, 2, 2, 3, 4, 3, 3, 2, 2],
+    descricao: 'Empresa Beta localizada no Rio Grande do Sul, especializada em soluções de energia solar.',
+    CNAE: '3511-3/01',
+    codigoDistribuidora: 1002,
   },
 ]
 export const leadsMock = enrichLeads(raw);
+
 
 

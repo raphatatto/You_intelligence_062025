@@ -88,6 +88,7 @@ export default function MapView({leads, selectedId}: Props) {
           <p className="text-xs text-gray-500">Fic: {selecionado.ficMed}</p>
           <p className="text-xs text-gray-500">CNAE: {selecionado.CNAE}</p>
           <p className="text-xs text-gray-500">Estado: {selecionado.estado}</p>
+           <p className="text-xs text-gray-500">Distribuidora: {selecionado.codigoDistribuidora}</p>
           <p className="text-xs text-gray-500">Descrição: {selecionado.descricao}</p>
         </Popup>
       )}
