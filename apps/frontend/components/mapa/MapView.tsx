@@ -7,6 +7,8 @@ import {Lead} from '@/app/types/lead';
 import { useRouter } from 'next/navigation'; 
 import { MapRef } from 'react-map-gl/maplibre';
 import { useEffect, useRef } from 'react';
+import { clsx } from 'clsx';
+
 
 import Map, {
   Marker,
@@ -70,7 +72,12 @@ export default function MapView({leads, selectedId}: Props) {
       onClick={() => router.push(`/leads?id=${l.id}`)}    
       className="cursor-pointer"           
     >
-      <MapPin className="w-6 h-6 text-red-600 drop-shadow-lg" />
+      <MapPin
+      className={clsx(
+      'w-6 h-6 drop-shadow-lg transition-all',
+      l.id === selectedId ? 'text-lime-400 scale-125' : 'text-red-600'
+    )}
+  />
       </div>
     </Marker>
   ))}

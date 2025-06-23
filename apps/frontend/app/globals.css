@@ -49,6 +49,5 @@ body {
   box-shadow: 0 4px 10px #0005;
 }
 
-/* utilitário para links/ícones primários */
 .text-primary { color: var(--youon-primary); }
 .bg-primary   { background: var(--youon-primary); }

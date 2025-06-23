@@ -9,13 +9,23 @@ const fetcher = (url: string) =>
     return r.json();
   });
 
-export const useLeads = () =>
-  useSWR<Lead[]>(
-    base ? '/leads' : null,            // não faz fetch se base == ""
-    fetcher,
-    {
-      fallbackData: leadsMock,
-      revalidateOnFocus: false,
-      onErrorRetry: () => {},          // evita loop
-    }
-  );
+// export const useLeads = () =>
+//   useSWR<Lead[]>(
+//     base ? '/leads' : null,            // não faz fetch se base == ""
+//     fetcher,
+//     {
+//       fallbackData: leadsMock,
+//       revalidateOnFocus: false,
+//       onErrorRetry: () => {},          // evita loop
+//     }
+//   );
+
+  export async function getLeads(): Promise<Lead[]> {
+  const res = await fetch('/mock/leads.json'); // depois trocamos essa URL
+  if (!res.ok) throw new Error('Erro ao carregar leads');
+  return res.json();
+}
+
+export function useLeads() {
+  return useSWR('leads', getLeads); // chave "leads", usa a função acima
+}
