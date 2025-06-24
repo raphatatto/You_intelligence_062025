@@ -7,18 +7,16 @@ import { usePathname } from 'next/navigation';
 import { clsx } from 'clsx';
 import {
   Home,
-  LayoutDashboard,
   MapPinned,
   BarChart2,
-  Newspaper,
 } from 'lucide-react';
 
 const links = [
   { href: '/',        label: 'Home',             icon: Home },
-  { href: '/dashboard',label: 'Dashboard',       icon: LayoutDashboard },
+  //{ href: '/dashboard',label: 'Dashboard',       icon: LayoutDashboard },
   { href: '/mapa',    label: 'Mapa interativo',  icon: MapPinned },
   { href: '/leads',   label: 'Dados',            icon: BarChart2 },
-  { href: '/noticias',label: 'Notícias',         icon: Newspaper },
+  //{ href: '/noticias',label: 'Notícias',         icon: Newspaper },
 ];
 
 export default function Sidebar() {
