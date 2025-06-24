@@ -1,3 +1,4 @@
+# api/services/config.py
 from functools import lru_cache
 from urllib.parse import quote
 from pydantic_settings import BaseSettings
@@ -20,16 +21,17 @@ class Settings(BaseSettings):
         env_file = ".env"
         env_file_encoding = "utf-8"
 
-@property
-def dsn(self) -> str:
-    if self.postgres_dsn:
-        return self.postgres_dsn
-    return (
-        f"postgresql+asyncpg://{quote(self.db_user)}:{quote(self.db_pass)}"
-        f"@{self.db_host}:{self.db_port}/{self.db_name}"
-    )
-
-
+    @property
+    def dsn(self) -> str:
+        if self.postgres_dsn:
+            return self.postgres_dsn
+        # escapa usuário e senha
+        user = quote(self.db_user)
+        pwd  = quote(self.db_pass)
+        return (
+            f"postgresql+asyncpg://{user}:{pwd}"
+            f"@{self.db_host}:{self.db_port}/{self.db_name}"
+        )
 
 @lru_cache
 def get_settings() -> Settings:
