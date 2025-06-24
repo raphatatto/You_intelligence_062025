@@ -29,11 +29,13 @@ export default function LeadsTable({ rows, selectedId }: { rows: Lead[]; selecte
           {rows.map((l) => (
             <tr
               key={l.id}
+              id={`lead-row-${l.id}`}
               onClick={() => router.push(`/mapa?id=${l.id}`)}
               className={`cursor-pointer border-b border-zinc-700 hover:bg-zinc-800 transition-all ${
-                selectedId === l.id ? 'bg-zinc-800' : ''
+                selectedId === l.id ? 'bg-lime-900/40 ring-1 ring-lime-400' : ''
               }`}
             >
+
               <td className="px-4 py-2">{l.id}</td>
               <td className="px-4 py-2">{l.nome}</td>
               <td className="px-4 py-2">{l.dicMed}</td>

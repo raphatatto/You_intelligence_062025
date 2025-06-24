@@ -1,0 +1,51 @@
+[
+  {
+    "id": 1,
+    "nome": "Fazenda Beta",
+    "lat": -23.5617,
+    "lng": -46.656,
+    "estado": "SP",
+    "codigoDistribuidora": 1001,
+    "CNAE": "1052-0/00",
+    "dicMed": 8.5,
+    "ficMed": 3.1,
+    "descricao": "Laticínio no interior de SP"
+  },
+  {
+    "id": 2,
+    "nome": "Supermercado Alpha",
+    "lat": -22.9,
+    "lng": -43.2,
+    "estado": "RJ",
+    "codigoDistribuidora": 1002,
+    "CNAE": "4711-3/01",
+    "dicMed": 2.1,
+    "ficMed": 1.5,
+    "descricao": "Rede varejista"
+  },
+{
+  "id": 3,
+  "nome": "Restaurante Gourmet",
+  "lat": -23.5505,
+  "lng": -46.6333,
+  "estado": "SP",
+  "codigoDistribuidora": 1003,
+  "CNAE": "5611-2/01",
+  "dicMed": 4.0,
+  "ficMed": 2.5,
+  "descricao": "Restaurante de alta gastronomia"
+}
+,
+  {
+    "id": 4,
+    "nome": "Mercado Verde",
+    "lat": -22.9068,
+    "lng": -43.1729,
+    "estado": "RJ",
+    "codigoDistribuidora": 1004,
+    "CNAE": "4721-1/01",
+    "dicMed": 3.0,
+    "ficMed": 1.8,
+    "descricao": "Mercado de produtos orgânicos"
+  }
+]
