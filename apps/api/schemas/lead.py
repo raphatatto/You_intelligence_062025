@@ -1,43 +1,55 @@
+from pydantic import BaseModel
+from typing import Optional, List
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict
 
-class LeadBase(BaseModel):
+class LeadOut(BaseModel):
     id: str
-    nome_uc: str | None = None
-    cnpj: str | None = None
-    classe: str | None = None
-    segmento: str | None = None
-    latitude: float | None = None
-    longitude: float | None = None
-
-    model_config = ConfigDict(from_attributes=True)
-
-class LeadDetail(LeadBase):
-    subgrupo: str | None = None
-    modalidade: str | None = None
-    municipio_ibge: int | None = None
-    data_conexao: datetime | None = None
+    nome: Optional[str]
+    cnpj: Optional[str]
+    classe: Optional[str]
+    subgrupo: Optional[str]
+    modalidade: Optional[str]
+    estado: Optional[str]
+    municipio: Optional[str]
+    distribuidora: Optional[str]
+    potencia: Optional[float]
+    latitude: Optional[float]
+    longitude: Optional[float]
+    segmento: Optional[str]
+    status: Optional[str]
+    cnae: Optional[str]
+    dicMed: Optional[float]
+    ficMed: Optional[float]
+    dicMes: Optional[List[float]]
+    ficMes: Optional[List[float]]
 
 class LeadList(BaseModel):
     total: int
-    items: list[LeadBase]
+    items: List[LeadOut]
+
+class LeadDetail(LeadOut):
+    data_conexao: Optional[datetime] = None
+
+class LeadQualidade(BaseModel):
+    dicMed: Optional[float]
+    ficMed: Optional[float]
+    dicMes: Optional[List[float]]
+    ficMes: Optional[List[float]]
 
 class LeadMapOut(BaseModel):
     id: str
     latitude: float
     longitude: float
-    classe: str | None = None
-    subgrupo: str | None = None
-    potencia: float | None = None
-    distribuidora: str | None = None
-    status: str
-
-    model_config = ConfigDict(from_attributes=True)
+    classe: Optional[str]
+    subgrupo: Optional[str]
+    potencia: Optional[float]
+    distribuidora: Optional[str]
+    status: Optional[str]
 
 class LeadResumo(BaseModel):
     total_leads: int
     total_com_cnpj: int
     total_enriquecidos: int
-    media_consumo: float | None
-    media_potencia: float | None
+    media_consumo: Optional[float]
+    media_potencia: Optional[float]
     por_classe: dict[str, int]

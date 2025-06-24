@@ -1,1 +1,51 @@
-version: '3'
+version: '3.9'
+
+services:
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    container_name: youon-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./apps/api:/app
+    environment:
+      - DB_HOST=db
+      - DB_NAME=youon
+      - DB_USER=postgres
+      - DB_PASS=youon123
+      - DB_PORT=5432
+    depends_on:
+      - db
+
+  frontend:
+    build:
+      context: ./apps/frontend
+      dockerfile: Dockerfile
+    container_name: youon-frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./apps/frontend:/app
+    environment:
+      - NEXT_PUBLIC_API_BASE=http://localhost:8000/v1
+    depends_on:
+      - api
+
+  db:
+    image: postgres:15
+    container_name: youon-db
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: youon123
+      POSTGRES_DB: youon
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

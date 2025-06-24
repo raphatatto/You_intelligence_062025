@@ -1,20 +1,21 @@
-// types/lead.ts
 export type Lead = {
-  id: number;
+  id: string;
   nome: string;
-  lat: number;
-  lng: number;
+  latitude: number;
+  longitude: number;
   estado: string;
 
-  dicMes: number[];   // 12 itens
-  ficMes: number[];   // 12 itens
-
-  // calculados no front (ou já vindos do back):
+  dicMes: number[];
+  ficMes: number[];
   dicMed?: number;
   ficMed?: number;
 
-  descricao: string;
-  CNAE?: string;
-  codigoDistribuidora: number;
+  descricao?: string;
+  cnae?: string;
+  distribuidora?: string;
 
+  classe?: string;
+  potencia?: number;
+  segmento?: string;
+  status?: string;
 };
