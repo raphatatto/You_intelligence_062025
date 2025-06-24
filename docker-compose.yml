@@ -1,11 +1,8 @@
-version: '3.9'
-
 services:
-
   api:
     build:
-      context: ./apps/api
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: apps/api/Dockerfile
     container_name: youon-api
     ports:
       - "8000:8000"

@@ -17,6 +17,8 @@ AsyncSessionLocal = sessionmaker(
     expire_on_commit=False,
 )
 
-async def get_session() -> AsyncSession:
+from typing import AsyncGenerator
+
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
         yield session
