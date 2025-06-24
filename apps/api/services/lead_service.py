@@ -1,6 +1,8 @@
-from sqlalchemy import select, func
+# apps/api/services/lead_service.py
+from sqlalchemy import select, func, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from packages.database.models import LeadBruto
+from apps.api.schemas.lead import LeadMapOut  # importe seu schema, se necessário
 
 async def list_leads(
     db: AsyncSession,
@@ -34,7 +36,6 @@ async def heatmap_points(db: AsyncSession, segment: str | None):
 
     return (await db.execute(query)).all()
 
-
 async def get_map_points(db: AsyncSession, status: str | None, distribuidora: str | None, limit: int = 1000):
     filters = ["latitude IS NOT NULL", "longitude IS NOT NULL"]
     params = {"limit": limit}
@@ -47,17 +48,15 @@ async def get_map_points(db: AsyncSession, status: str | None, distribuidora: st
         params["distribuidora"] = distribuidora
 
     where_clause = " AND ".join(filters)
-
     query = f"""
         SELECT id, latitude, longitude, classe, subgrupo, potencia, distribuidora, status
         FROM lead_bruto
         WHERE {where_clause}
         LIMIT :limit
     """
-
-    rows = await db.execute(text(query), params)
+    stmt = text(query)
+    rows = await db.execute(stmt, params)
     return [dict(r._mapping) for r in rows]
-
 
 async def get_resumo(db: AsyncSession, estado: str | None, municipio: str | None, segmento: str | None):
     filters = []
@@ -73,10 +72,7 @@ async def get_resumo(db: AsyncSession, estado: str | None, municipio: str | None
         filters.append("segmento = :segmento")
         params["segmento"] = segmento
 
-    where_clause = " AND ".join(filters)
-    if where_clause:
-        where_clause = "WHERE " + where_clause
-
+    where_clause = f"WHERE {' AND '.join(filters)}" if filters else ""
     query = f"""
         SELECT
             COUNT(*) AS total_leads,
