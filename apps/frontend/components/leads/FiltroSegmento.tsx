@@ -17,7 +17,7 @@ export default function FiltroSegmento() {
       <select
         value={segmento}
         onChange={(e) => setSegmento(e.target.value)}
-        className="bg-zinc-900 border border-zinc-700 rounded px-3 py-1 text-sm text-white"
+        className="text-xs text-white bg-zinc-800 border border-zinc-600 px-3 py-1.5 rounded-md shadow-sm hover:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-lime-500 transition"
       >
         <option value="">Todos</option>
       {cnaesUnicos

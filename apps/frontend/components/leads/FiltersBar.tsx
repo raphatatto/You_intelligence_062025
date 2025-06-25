@@ -32,7 +32,8 @@ export default function FiltersBar({ estados }: { estados: string[] }) {
         <select
           value={order}
           onChange={(e) => setOrder(e.target.value as SortKey)}
-          className="rounded border border-zinc-600 bg-zinc-800 px-2 py-1 text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-lime-500"
+          className="text-xs text-white bg-zinc-800 border border-zinc-600 px-3 py-1.5 rounded-md shadow-sm hover:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-lime-500 transition"
+
         >
           <option value="none">–</option>
           <option value="dic-asc">DIC ↑</option>

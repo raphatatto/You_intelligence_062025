@@ -1,32 +1,60 @@
-import CardKPI from '@/components/ui/CardKPI';
-import BarEnergy from '@/components/charts/BarEnergy';
-import LineLeads from '@/components/charts/LineLeads';
-import {Bolt, Users} from 'lucide-react';
+'use client';
 
-import {mockEnergia} from '@/app/data/energia';
-import {mockLeads}   from '@/app/data/leads';
+import CardKPI from '@/components/ui/CardKPI';
+import { Bolt, Users } from 'lucide-react';
+import { useLeads } from '@/services/leads';
+import { countByEstado, calcularEnergiaMapeada } from '@/utils/analytics';
+import BarLeadsEstado from '@/components/charts/BarLeadsEstados';
 
 export default function Dashboard() {
+  const { data: leads = [] } = useLeads();
+  const dataEstado = countByEstado(leads);
+  const energiaTotal = calcularEnergiaMapeada(leads);
+
   return (
-    <section className="space-y-8">
-      {/* KPIs */}
-      <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-6">
-        <CardKPI title="Energia mapeada (MWh)" value="1 250" icon={<Bolt />} />
-        <CardKPI title="Leads qualificados"      value="289"   icon={<Users />} />
-      </div>
+<section className="space-y-8 px-6 lg:px-12 py-10 bg-black text-white">
+  {/* Header */}
+  <div className="space-y-1">
+    <h1 className="text-3xl font-bold">Dashboard Interno - You.On</h1>
+    <p className="text-muted-foreground text-sm">
+      Mapeamento de leads e oportunidades no mercado de energia.
+    </p>
+  </div>
 
-      {/* Gráficos */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        <div className="rounded-xl bg-white shadow p-4">
-          <h2 className="text-lg font-semibold mb-2">Energia mapeada por mês</h2>
-          <BarEnergy data={mockEnergia} />
-        </div>
+  {/* KPIs */}
+  <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-6 mt-6">
+    <CardKPI
+      title="Energia mapeada (MWh)"
+      value="17,6"
+      icon={<Bolt className="text-yellow-400" />}
+      className="bg-[#1a1a1a] border border-white/10"
+    />
+    <CardKPI
+      title="Leads qualificados"
+      value="4"
+      icon={<Users className="text-green-400" />}
+      className="bg-[#1a1a1a] border border-white/10"
+    />
+    <CardKPI
+      title="% com CNPJ"
+      value="100%"
+      icon={<Users className="text-blue-400" />}
+      className="bg-[#1a1a1a] border border-white/10"
+    />
+    <CardKPI
+      title="Última atualização"
+      value="25/06/2025"
+      icon={<Bolt className="text-pink-400" />}
+      className="bg-[#1a1a1a] border border-white/10"
+    />
+  </div>
 
-        <div className="rounded-xl bg-white shadow p-4">
-          <h2 className="text-lg font-semibold mb-2">Leads por dia (últ. semana)</h2>
-          <LineLeads data={mockLeads} />
-        </div>
-      </div>
-    </section>
+  {/* Gráfico */}
+  <div className="bg-[#121212] rounded-xl p-6 shadow-lg border border-white/10">
+    <h2 className="text-lg font-semibold mb-3">Leads por Estado</h2>
+    <BarLeadsEstado data={dataEstado} />
+  </div>
+</section>
+
   );
 }

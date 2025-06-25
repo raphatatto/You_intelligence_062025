@@ -44,7 +44,7 @@ export default function MapView({leads, selectedId}: Props) {
       duration: 1000,
     });
 
-    setSelecionado(alvo);       // abre o popup
+    setSelecionado(alvo);       
   }, [mapReady,selectedId, leads]);
 
   return (

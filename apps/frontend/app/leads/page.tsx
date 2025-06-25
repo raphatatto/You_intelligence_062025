@@ -101,7 +101,8 @@ export default function LeadsPage() {
               <select
                 value={estado}
                 onChange={(e) => setEstado(e.target.value)}
-                className="bg-zinc-800 border border-zinc-600 rounded px-3 py-2 text-sm text-white"
+                className="text-xs text-white bg-zinc-800 border border-zinc-600 px-3 py-1.5 rounded-md shadow-sm hover:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-lime-500 transition"
+
               >
                 <option value="">Todos</option>
                 {estados.map((uf) => (
@@ -117,7 +118,7 @@ export default function LeadsPage() {
               <select
                 value={order}
                 onChange={(e) => setOrder(e.target.value as any)}
-                className="bg-zinc-800 border border-zinc-600 rounded px-3 py-2 text-sm text-white"
+                className="text-xs text-white bg-zinc-800 border border-zinc-600 px-3 py-1.5 rounded-md shadow-sm hover:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-lime-500 transition"
               >
                 <option value="none">–</option>
                 <option value="dic-asc">DIC Crescente</option>
@@ -132,7 +133,7 @@ export default function LeadsPage() {
               placeholder="Buscar..."
               value={buscaInput}
               onChange={(e) => setBuscaInput(e.target.value)}
-              className="bg-zinc-800 border border-zinc-600 rounded px-4 py-2 text-sm text-white w-72"
+              className="text-xs text-white bg-zinc-800 border border-zinc-600 px-3 py-1.5 rounded-md shadow-sm hover:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-lime-500 transition"
               spellCheck={false}
             />
             <button
@@ -148,7 +149,7 @@ export default function LeadsPage() {
 
           <button
             onClick={clearFilters}
-            className="flex items-center gap-1 bg-green-600 hover:bg-green-500 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-sm transition"
+            className="flex items-center gap-1 bg-red-600 hover:bg-red-500 text-white text-xs font-medium px-2.5 py-1.5 rounded-md shadow-sm transition"
           >
             Limpar filtros
           </button>
