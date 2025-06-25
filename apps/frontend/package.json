@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "autoprefixer": "^10.4.21",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.515.0",
