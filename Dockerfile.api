@@ -1,0 +1,19 @@
+FROM python:3.11
+
+# Coloca tudo no diretório raiz do projeto dentro do container
+WORKDIR /code
+
+# Copia o projeto inteiro (incluindo apps/, packages/, etc)
+COPY . .
+
+# Instala as dependências Python
+RUN pip install --no-cache-dir -r apps/api/requirements.txt
+
+# Define o path para que os imports tipo `from apps.api...` e `from packages...` funcionem
+ENV PYTHONPATH=/code:/code/apps:/code/packages
+
+# Vai pra dentro da pasta da API
+WORKDIR /code/apps/api
+
+# Sobe a API FastAPI
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

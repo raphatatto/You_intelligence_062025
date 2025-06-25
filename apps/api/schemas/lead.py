@@ -4,24 +4,24 @@ from datetime import datetime
 
 class LeadOut(BaseModel):
     id: str
-    nome: Optional[str]
-    cnpj: Optional[str]
-    classe: Optional[str]
-    subgrupo: Optional[str]
-    modalidade: Optional[str]
-    estado: Optional[str]
-    municipio: Optional[str]
-    distribuidora: Optional[str]
-    potencia: Optional[float]
-    latitude: Optional[float]
-    longitude: Optional[float]
-    segmento: Optional[str]
-    status: Optional[str]
-    cnae: Optional[str]
-    dicMed: Optional[float]
-    ficMed: Optional[float]
-    dicMes: Optional[List[float]]
-    ficMes: Optional[List[float]]
+    nome: Optional[str] = None
+    cnpj: Optional[str] = None
+    classe: Optional[str] = None
+    subgrupo: Optional[str] = None
+    modalidade: Optional[str] = None
+    estado: Optional[str] = None
+    municipio: Optional[str] = None
+    distribuidora: Optional[str] = None
+    potencia: Optional[float] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    segmento: Optional[str] = None
+    status: Optional[str] = None
+    cnae: Optional[str] = None
+    dicMed: Optional[float] = None
+    ficMed: Optional[float] = None
+    dicMes: Optional[List[float]] = None
+    ficMes: Optional[List[float]] = None
 
 class LeadList(BaseModel):
     total: int
@@ -31,25 +31,25 @@ class LeadDetail(LeadOut):
     data_conexao: Optional[datetime] = None
 
 class LeadQualidade(BaseModel):
-    dicMed: Optional[float]
-    ficMed: Optional[float]
-    dicMes: Optional[List[float]]
-    ficMes: Optional[List[float]]
+    dicMed: Optional[float] = None
+    ficMed: Optional[float] = None
+    dicMes: Optional[List[float]] = None
+    ficMes: Optional[List[float]] = None
 
 class LeadMapOut(BaseModel):
     id: str
     latitude: float
     longitude: float
-    classe: Optional[str]
-    subgrupo: Optional[str]
-    potencia: Optional[float]
-    distribuidora: Optional[str]
-    status: Optional[str]
+    classe: Optional[str] = None
+    subgrupo: Optional[str] = None
+    potencia: Optional[float] = None
+    distribuidora: Optional[str] = None
+    status: Optional[str] = None
 
 class LeadResumo(BaseModel):
     total_leads: int
     total_com_cnpj: int
     total_enriquecidos: int
-    media_consumo: Optional[float]
-    media_potencia: Optional[float]
+    media_consumo: Optional[float] = None
+    media_potencia: Optional[float] = None
     por_classe: dict[str, int]

@@ -1,21 +1,22 @@
+version: "3.8"
+
 services:
   api:
     build:
       context: .
-      dockerfile: apps/api/Dockerfile
+      dockerfile: Dockerfile.api
     container_name: youon-api
     ports:
       - "8000:8000"
     volumes:
-      - ./apps/api:/app
+      - .:/code
     environment:
-      - DB_HOST=db
-      - DB_NAME=youon
-      - DB_USER=postgres
-      - DB_PASS=youon123
+      - DB_HOST=psql-database-mapping.postgres.database.azure.com
+      - DB_NAME=db_youon_intelligence
+      - DB_USER=guilherme@psql-database-mapping
+      - DB_PASS=SenhaForteAqui
       - DB_PORT=5432
-    depends_on:
-      - db
+    working_dir: /code/apps/api
 
   frontend:
     build:
@@ -30,19 +31,3 @@ services:
       - NEXT_PUBLIC_API_BASE=http://localhost:8000/v1
     depends_on:
       - api
-
-  db:
-    image: postgres:15
-    container_name: youon-db
-    restart: always
-    ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: youon123
-      POSTGRES_DB: youon
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-volumes:
-  postgres_data:

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from apps.api.dependencies.session import get_session
+from packages.database.session import get_session
 from apps.api.schemas.lead import (
     LeadList,
     LeadOut,

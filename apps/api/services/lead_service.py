@@ -1,7 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
-from apps.api.schemas.lead import LeadOut
-from apps.api.schemas.lead import LeadQualidade
+from apps.api.schemas.lead import LeadOut, LeadQualidade
 
 async def list_leads(db: AsyncSession, skip: int = 0, limit: int = 100):
     query = text("""
@@ -12,8 +11,8 @@ async def list_leads(db: AsyncSession, skip: int = 0, limit: int = 100):
             lb.classe,
             lb.subgrupo,
             lb.modalidade,
-            lb.estado,
-            lb.municipio_ibge AS municipio,
+            gi.estado,
+            gi.cidade AS municipio,
             lb.distribuidora,
             le.potencia,
             (lb.coordenadas->>'lat')::float AS latitude,
@@ -22,8 +21,17 @@ async def list_leads(db: AsyncSession, skip: int = 0, limit: int = 100):
             lb.status,
             lb.cnae,
             lq.dic AS "dicMed",
-            lq.fic AS "ficMed"
+            lq.fic AS "ficMed",
+            ARRAY[
+                lq.dic_jan, lq.dic_fev, lq.dic_mar, lq.dic_abr, lq.dic_mai, lq.dic_jun,
+                lq.dic_jul, lq.dic_ago, lq.dic_set, lq.dic_out, lq.dic_nov, lq.dic_dez
+            ] AS "dicMes",
+            ARRAY[
+                lq.fic_jan, lq.fic_fev, lq.fic_mar, lq.fic_abr, lq.fic_mai, lq.fic_jun,
+                lq.fic_jul, lq.fic_ago, lq.fic_set, lq.fic_out, lq.fic_nov, lq.fic_dez
+            ] AS "ficMes"
         FROM lead_bruto lb
+        LEFT JOIN geo_info_lead gi ON lb.id = gi.lead_id
         LEFT JOIN lead_energia le ON lb.id = le.lead_id
         LEFT JOIN lead_qualidade lq ON lb.id = lq.lead_id
         ORDER BY lb.nome_uc
@@ -41,6 +49,7 @@ async def list_leads(db: AsyncSession, skip: int = 0, limit: int = 100):
 
     leads = [LeadOut(**row) for row in rows]
     return total, leads
+
 
 async def get_qualidade(db: AsyncSession, lead_id: str) -> LeadQualidade | None:
     query = text("""

@@ -2,20 +2,20 @@ FROM node:20
 
 WORKDIR /app
 
-# Primeiro copia só o package.json e instala dependências
+# Copia dependências primeiro para otimizar cache
 COPY package.json .
 COPY package-lock.json .
 
+# Instala todas as dependências (incluindo devDependencies)
+RUN npm config set strict-ssl false
 RUN npm install
 
-# Instala as ferramentas de build do CSS (DevDependencies)
-RUN npm install --save-dev tailwindcss postcss autoprefixer
-
-# Agora copia todo o resto
+# Copia todo o restante da aplicação
 COPY . .
 
 EXPOSE 3000
 
+# Se sua rede trava TLS (como na You.On), isso evita falhas em fetch
 ENV NODE_TLS_REJECT_UNAUTHORIZED=0
 
 CMD ["npm", "run", "dev"]
