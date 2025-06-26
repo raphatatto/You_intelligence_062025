@@ -1,13 +1,17 @@
-# Ignora o que não é necessário para o container da API
-node_modules
-__pycache__
+# Ignorar dependências locais e arquivos temporários
+node_modules/
+__pycache__/
 *.pyc
 *.pyo
 *.pyd
+
+# Ambientes e configs locais
 .env
 .env.*
-.vscode
-.idea
-.next
-apps/frontend/.next
-apps/frontend/node_modules
+.vscode/
+.idea/
+
+# Artefatos do frontend que não interessam para o container da API
+apps/frontend/.next/
+apps/frontend/node_modules/
+apps/frontend/.env.local
