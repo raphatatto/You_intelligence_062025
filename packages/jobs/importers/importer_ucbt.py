@@ -2,13 +2,10 @@
 import io
 from pathlib import Path
 from datetime import datetime
-
 import geopandas as gpd
 import pandas as pd
 from fiona import listlayers
-
 from packages.database.connection import get_db_cursor
-
 
 def _coerce_date(val):
     if pd.isna(val):
@@ -21,7 +18,6 @@ def _coerce_date(val):
     except Exception:
         return None
 
-
 def _to_pg_array(data):
     def fmt(lst):
         return "{" + ",".join(map(str, lst)) + "}" if len(lst) > 0 else r"\N"
@@ -29,13 +25,11 @@ def _to_pg_array(data):
         return data.apply(fmt)
     return [fmt(lst) for lst in data]
 
-
 def _copy_df(df, table, cur):
     buf = io.StringIO()
     df.to_csv(buf, index=False, header=False, na_rep="\\N")
     buf.seek(0)
     cur.copy_expert(f"COPY {table} FROM STDIN WITH (FORMAT csv, NULL '\\N')", buf)
-
 
 def importar_ucbt(gdb: Path, distribuidora: str, ano: int):
     layer = "UCBT_tab"
