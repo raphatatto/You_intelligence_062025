@@ -30,7 +30,8 @@ services:
       - ./apps/frontend:/app
       - /app/node_modules
     environment:
-      - NEXT_PUBLIC_API_BASE=http://api:8000/v1
+      # 🟢 IMPORTANTE: use localhost no navegador (host) para funcionar fora do container
+      - NEXT_PUBLIC_API_BASE=http://localhost:8000/v1
       - NODE_ENV=development
     depends_on:
       - api
