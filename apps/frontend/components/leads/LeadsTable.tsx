@@ -3,7 +3,7 @@
 import type { Lead } from '@/app/types/lead';
 import { useRouter } from 'next/navigation';
 
-export default function LeadsTable({ rows, selectedId }: { rows: Lead[]; selectedId?: number | null }) {
+export default function LeadsTable({ rows, selectedId }: { rows: Lead[]; selectedId?: string | null }) {
   const router = useRouter();
 
   if (!rows.length) {
@@ -22,7 +22,7 @@ export default function LeadsTable({ rows, selectedId }: { rows: Lead[]; selecte
             <th className="px-4 py-2 text-xs uppercase tracking-wider whitespace-nowrap">CNAE</th>
             <th className="px-4 py-2 text-xs uppercase tracking-wider">Estado</th>
             <th className="px-4 py-2 text-xs uppercase tracking-wider">Distribuidora</th>
-            <th className="px-4 py-2 text-xs uppercase tracking-wider">Descrição</th>
+            <th className="px-4 py-2 text-xs uppercase tracking-wider">Segmento</th>
           </tr>
         </thead>
         <tbody>
@@ -35,15 +35,14 @@ export default function LeadsTable({ rows, selectedId }: { rows: Lead[]; selecte
                 selectedId === l.id ? 'bg-lime-900/40 ring-1 ring-lime-400' : ''
               }`}
             >
-
               <td className="px-4 py-2">{l.id}</td>
-              <td className="px-4 py-2">{l.nome}</td>
-              <td className="px-4 py-2">{l.dicMed}</td>
-              <td className="px-4 py-2">{l.ficMed}</td>
-              <td className="px-4 py-2 capitalize whitespace-nowrap">{l.CNAE}</td>
-              <td className="px-4 py-2 uppercase">{l.estado}</td>
-              <td className="px-4 py-2 uppercase">{l.codigoDistribuidora}</td>
-              <td className="px-4 py-2">{l.descricao}</td>
+              <td className="px-4 py-2">{l.nome ?? '—'}</td>
+              <td className="px-4 py-2">{l.dicMed ?? '—'}</td>
+              <td className="px-4 py-2">{l.ficMed ?? '—'}</td>
+              <td className="px-4 py-2 capitalize whitespace-nowrap">{l.cnae ?? '—'}</td>
+              <td className="px-4 py-2 uppercase">{l.estado ?? '—'}</td>
+              <td className="px-4 py-2 uppercase">{l.distribuidora ?? '—'}</td>
+              <td className="px-4 py-2">{l.segmento ?? '—'}</td>
             </tr>
           ))}
         </tbody>

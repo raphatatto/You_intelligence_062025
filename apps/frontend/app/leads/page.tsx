@@ -24,25 +24,12 @@ function exportarParaExcel(leadsParaExportar: Lead[], nomeArquivo = 'leads.xlsx'
 export default function LeadsPage() {
   const [mostrarFiltros, setMostrarFiltros] = useState(false)
   const [buscaInput, setBuscaInput] = useState('')
-  const { estado, distribuidora, segmento, clearFilters, setEstado, setBusca, busca } =
-    useFilters()
-  const { order, setOrder } = useSort()
 
+  const { estado, distribuidora, segmento, clearFilters, setEstado, setBusca, busca } = useFilters()
+  const { order, setOrder } = useSort()
   const { leads, total, isLoading, error } = useLeads()
 
-  if (isLoading) {
-    return <p className="p-6 text-white">Carregando…</p>
-  }
-
-  if (error) {
-    return (
-      <p className="p-6 text-red-500">
-        Erro ao carregar leads: {error.message}
-      </p>
-    )
-  }
-
-  // Extrai apenas estados não-nulos e únicos
+  // ✅ Esses dois hooks devem vir antes de qualquer return condicional
   const estados = useMemo<string[]>(() => {
     return Array.from(
       new Set(
@@ -53,23 +40,12 @@ export default function LeadsPage() {
     ).sort()
   }, [leads])
 
-  // Aplica filtros, busca e ordenação
   const rows = useMemo<Lead[]>(() => {
     let arr = [...leads]
 
-    if (estado) {
-      arr = arr.filter((l) => l.estado === estado)
-    }
-
-    if (distribuidora) {
-      arr = arr.filter(
-        (l) => Number(l.distribuidora) === Number(distribuidora)
-      )
-    }
-
-    if (segmento) {
-      arr = arr.filter((l) => l.cnae === segmento)
-    }
+    if (estado) arr = arr.filter((l) => l.estado === estado)
+    if (distribuidora) arr = arr.filter((l) => Number(l.distribuidora) === Number(distribuidora))
+    if (segmento) arr = arr.filter((l) => l.cnae === segmento)
 
     if (busca) {
       const term = stripDiacritics(busca.toLowerCase())
@@ -77,49 +53,30 @@ export default function LeadsPage() {
         const nome = stripDiacritics(l.nome?.toLowerCase() ?? '')
         const uf = stripDiacritics(l.estado?.toLowerCase() ?? '')
         const cnae = stripDiacritics(l.cnae?.toLowerCase() ?? '')
-        // const desc = stripDiacritics(l.descricao?.toLowerCase() ?? '')
-        const distName = stripDiacritics(
-          (DISTRIBUIDORAS_MAP[l.distribuidora] ??
-            l.distribuidora
-          )
-            .toString()
-            .toLowerCase()
-        )
-        const segName = stripDiacritics(
-          (l.cnae && CNAE_SEGMENTOS[l.cnae]?.toLowerCase()) ?? ''
-        )
+        const distName = stripDiacritics((DISTRIBUIDORAS_MAP[l.distribuidora] ?? l.distribuidora).toString().toLowerCase())
+        const segName = stripDiacritics((l.cnae && CNAE_SEGMENTOS[l.cnae]?.toLowerCase()) ?? '')
 
-        return (
-          nome.includes(term) ||
-          uf.includes(term) ||
-          cnae.includes(term) ||
-          // desc.includes(term) ||
-          distName.includes(term) ||
-          segName.includes(term)
-        )
+        return nome.includes(term) || uf.includes(term) || cnae.includes(term) || distName.includes(term) || segName.includes(term)
       })
     }
 
-    // ordenação customizada
     switch (order) {
       case 'dic-asc':
-        arr.sort((a, b) => (a.dicMed ?? 0) - (b.dicMed ?? 0))
-        break
+        arr.sort((a, b) => (a.dicMed ?? 0) - (b.dicMed ?? 0)); break
       case 'dic-desc':
-        arr.sort((a, b) => (b.dicMed ?? 0) - (a.dicMed ?? 0))
-        break
+        arr.sort((a, b) => (b.dicMed ?? 0) - (a.dicMed ?? 0)); break
       case 'fic-asc':
-        arr.sort((a, b) => (a.ficMed ?? 0) - (b.ficMed ?? 0))
-        break
+        arr.sort((a, b) => (a.ficMed ?? 0) - (b.ficMed ?? 0)); break
       case 'fic-desc':
-        arr.sort((a, b) => (b.ficMed ?? 0) - (a.ficMed ?? 0))
-        break
-      default:
-        break
+        arr.sort((a, b) => (b.ficMed ?? 0) - (a.ficMed ?? 0)); break
     }
 
     return arr
   }, [leads, estado, distribuidora, segmento, order, busca])
+
+  // ✅ só aqui os returns condicionais
+  if (isLoading) return <p className="p-6 text-white">Carregando…</p>
+  if (error) return <p className="p-6 text-red-500">Erro ao carregar leads: {error.message}</p>
 
   return (
     <section className="space-y-6 p-6">

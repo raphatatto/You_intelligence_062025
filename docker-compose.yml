@@ -10,6 +10,7 @@ services:
       - "8000:8000"
     volumes:
       - .:/code
+      - /code/apps/frontend/.next 
     environment:
       - DB_HOST=psql-database-mapping.postgres.database.azure.com
       - DB_NAME=db_youon_intelligence
@@ -28,6 +29,6 @@ services:
     volumes:
       - ./apps/frontend:/app
     environment:
-      - NEXT_PUBLIC_API_BASE=http://localhost:8000/v1
+      - NEXT_PUBLIC_API_BASE=http://api:8000/v1
     depends_on:
       - api

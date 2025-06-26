@@ -1,30 +1,24 @@
-import useSWR from 'swr';
-import type { Lead, LeadList } from '@/app/types/lead';
+import useSWR from 'swr'
+import type { Lead, LeadList } from '@/app/types/lead'
 
-// pega da env e cai no '' se não estiver definido
-const base = process.env.NEXT_PUBLIC_API_BASE ?? '';
+const base = process.env.NEXT_PUBLIC_API_BASE ?? ''
 
 const fetcher = (url: string) =>
-  fetch(`${base}${url}`, {
-    headers: {
-      // se sua API exigir JWT, descomente e implemente getToken()
-      // Authorization: `Bearer ${getToken()}`
-    },
-  }).then((r) => {
-    if (!r.ok) throw new Error('Erro ao carregar leads da API');
-    return r.json() as Promise<LeadList>;
-  });
+  fetch(`${base}${url}`).then((r) => {
+    if (!r.ok) throw new Error('Erro ao carregar leads da API')
+    return r.json() as Promise<LeadList>
+  })
 
 export function useLeads() {
-  const { data, error, isValidating } = useSWR<LeadList>('/v1/leads', fetcher, {
+  const { data, error, isValidating } = useSWR<LeadList>('/leads', fetcher, {
     revalidateOnFocus: false,
-    onErrorRetry: () => {}, // evita loop infinito
-  });
+    onErrorRetry: () => {},
+  })
 
   return {
-    leads: data?.items ?? [],    // array puro para uso no front
+    leads: data?.items ?? [],
     total: data?.total ?? 0,
     isLoading: isValidating,
     error,
-  };
+  }
 }

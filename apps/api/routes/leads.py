@@ -11,7 +11,7 @@ from apps.api.schemas.lead import (
 )
 from apps.api.services import lead_service
 
-router = APIRouter(prefix="/v1/leads", tags=["leads"])
+router = APIRouter(prefix="/leads", tags=["leads"])
 
 @router.get("", response_model=LeadList)
 async def list_leads(

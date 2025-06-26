@@ -1,29 +1,30 @@
-// … (seu código existente exportando `Lead`)
-
+// Tipagem principal de um lead
 export type Lead = {
-  id: string
-  nome: string | null
-  cnpj: string | null
-  classe: string
-  subgrupo: string | null
-  modalidade: string
-  estado: string | null
-  municipio: string | null
-  distribuidora: string
-  potencia: number
-  latitude: number | null
+  id: string // UUID vindo da API
+  nome: string | null // pode ser nulo em alguns casos
+  cnpj: string | null // opcional, dependendo do dado
+  classe: string // ex: 'Comercial', 'Industrial', etc.
+  subgrupo: string | null // ex: 'A4', 'B1', etc.
+  modalidade: string // ex: 'Convencional', 'Horosazonal'
+  estado: string | null // 'SP', 'RJ', etc.
+  municipio: string | null // nome da cidade
+  distribuidora: string // nome ou código da distribuidora
+  potencia: number // em kW
+  latitude: number | null // para exibir no mapa
   longitude: number | null
-  segmento: string
-  status: string
-  cnae: string
-  dicMed: number | null
-  ficMed: number | null
-  dicMes: number | null
-  ficMes: number | null
-  // … quaisquer outros campos que você já tenha
+  segmento: string // ex: 'Alimentos', 'Educação', etc.
+  status: string // ex: 'novo', 'em contato', etc.
+  cnae: string // código CNAE
+  dicMed: number | null // DIC médio
+  ficMed: number | null // FIC médio
+  dicMes: number | null // DIC no mês
+  ficMes: number | null // FIC no mês
+
+  // ⚠️ Dica: se tiver mais campos no futuro, use:
+  // [key: string]: any
 }
 
-// **Adicione este tipo para tipar o envelope da API**
+// Tipagem para o retorno paginado da API
 export type LeadList = {
   total: number
   items: Lead[]

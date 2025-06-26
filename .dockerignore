@@ -1,0 +1,13 @@
+# Ignora o que não é necessário para o container da API
+node_modules
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.env
+.env.*
+.vscode
+.idea
+.next
+apps/frontend/.next
+apps/frontend/node_modules
