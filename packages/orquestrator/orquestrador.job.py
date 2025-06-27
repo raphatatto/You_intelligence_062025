@@ -6,9 +6,9 @@ from pathlib import Path
 # Adiciona o root do projeto para os imports funcionarem
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from packages.jobs.importers.importer_ucat import main as importar_ucat
-from packages.jobs.importers.importer_ucmt import main as importar_ucmt
-from packages.jobs.importers.importer_ucbt import main as importar_ucbt
+from packages.jobs.importers.importer_ucat_job import main as importar_ucat
+from packages.jobs.importers.importer_ucmt_job import main as importar_ucmt
+from packages.jobs.importers.importer_ucbt_job import main as importar_ucbt
 
 # Diretório onde os arquivos GDB descompactados são salvos
 GDB_DIR = Path("data/downloads")
