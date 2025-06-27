@@ -1,0 +1,86 @@
+{
+  "COD_ID": {
+    "db": "id",
+    "descricao": "Código único da unidade consumidora"
+  },
+  "CNAE": {
+    "db": "cnae",
+    "descricao": "Classificação Nacional de Atividades Econômicas"
+  },
+  "GRU_TEN": {
+    "db": "grupo_tensao",
+    "descricao": "Grupo de tensão da unidade (Alta, Média, Baixa)"
+  },
+  "GRU_TAR": {
+    "db": "modalidade",
+    "descricao": "Modalidade tarifária (Ex: Azul, Verde, Convencional)"
+  },
+  "TIP_SIST": {
+    "db": "tipo_sistema",
+    "descricao": "Tipo de sistema (monofásico, trifásico, etc.)"
+  },
+  "SIT_ATIV": {
+    "db": "situacao",
+    "descricao": "Situação da unidade (ativa, cortada, desligada)"
+  },
+  "CLAS_SUB": {
+    "db": "classe",
+    "descricao": "Classe de consumo (residencial, industrial, etc.)"
+  },
+  "CONJ": {
+    "db": "segmento",
+    "descricao": "Segmento econômico (comercial, rural, agro, etc.)"
+  },
+  "SUB": {
+    "db": "subestacao",
+    "descricao": "Código da subestação elétrica associada"
+  },
+  "MUN": {
+    "db": "municipio_ibge",
+    "descricao": "Código IBGE do município"
+  },
+  "BRR": {
+    "db": "bairro",
+    "descricao": "Bairro do consumidor"
+  },
+  "CEP": {
+    "db": "cep",
+    "descricao": "Código postal"
+  },
+  "PAC": {
+    "db": "pac",
+    "descricao": "Potência ativa contratada (kW)"
+  },
+  "PN_CON": {
+    "db": "pn_con",
+    "descricao": "Potência nominal do consumidor (kW)"
+  },
+  "DAT_CON": {
+    "db": "data_conexao",
+    "descricao": "Data de conexão da unidade à rede"
+  },
+  "TIP_CC": {
+    "db": "tipo_corrente",
+    "descricao": "Tipo de corrente (alternada, contínua, etc.)"
+  },
+  "CAR_INST": {
+    "db": "carga_instalada",
+    "descricao": "Carga instalada no local"
+  },
+  "ARE_LOC": {
+    "db": "area_local",
+    "descricao": "Área do local (em m²)"
+  },
+  "FAS_CON": {
+    "db": "fase_conexao",
+    "descricao": "Fase de conexão (monofásico, bifásico, trifásico)"
+  },
+  "RAMAL": {
+    "db": "ramal_ligacao",
+    "descricao": "Ramal de ligação elétrica"
+  },
+  "LIV": {
+    "db": "mercado_energia",
+    "descricao": "Indica se o consumidor está no mercado livre ou cativo"
+  }
+}

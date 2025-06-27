@@ -3,29 +3,23 @@ from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-# Ajuste os imports dos seus importadores aqui
-from packages.jobs.importers.importer_ucat import main as importar_ucat
-
-# Quando tiver pronto:
-# from packages.jobs.importers.importer_ucmt import main as importar_ucmt
-# from packages.jobs.importers.importer_ucbt import main as importar_ucbt
+from packages.jobs.importerstest.importer_ucat import main as importar_ucat
+from packages.jobs.importerstest.importer_ucmt import main as importar_ucmt
+from packages.jobs.importerstest.importer_ucbt import main as importar_ucbt
 
 # Parâmetros de execução
 DISTRIBUIDORAS = {
     "ENEL DISTRIBUIÇÃO RIO": "Enel_RJ_383",
     "CPFL PAULISTA": "CPFL_Paulista_63",
-    # adicione outras distribuidoras aqui
+    
 }
 
 ANOS = [2023]
 
 BASES = {
-    "UCAT": {
-        "main": importar_ucat,
-        "layer": "UCAT_tab"
-    },
-    # "UCMT": { "main": importar_ucmt, "layer": "UCMT_tab" },
-    # "UCBT": { "main": importar_ucbt, "layer": "UCBT_tab" }
+    "UCAT": {"main": importar_ucat, "layer": "UCAT_tab"},
+    "UCMT": { "main": importar_ucmt, "layer": "UCMT_tab" },
+    "UCBT": { "main": importar_ucbt, "layer": "UCBT_tab" }
 }
 
 GDB_DIR = Path("data/downloads")  # onde estão os arquivos GDB
