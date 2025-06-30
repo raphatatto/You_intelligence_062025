@@ -2,12 +2,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from apps.api.services.config import get_settings
-from routes.health import router as health_router
-from routes.leads import router as leads_router
-from services.config import get_settings
+from apps.api.routes.health import router as health_router
+from apps.api.routes.leads import router as leads_router
+from apps.api.services.config import get_settings
 
 # NOVAS ROTAS DO ADMIN
-from routes.admin import (
+from apps.api.routes.admin import (
     dashboard as admin_dashboard_router,
     importacoes as admin_importacoes_router,
     leads as admin_leads_router,

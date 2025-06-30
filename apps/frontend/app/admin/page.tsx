@@ -1,45 +1,58 @@
-'use client';
+import { useEffect, useState } from 'react';
+import { getLeadsRaw, enrichGeo, enrichCNPJ } from '@/services/admin';
 
-import { useState } from 'react';
-import SelectDistribuidoras from '../admin/SelectDistribuidoras';
-import SelectAnos from '../admin/SelectAnos';
-import ButtonImportar from '../admin/ButtonImportar';
-import TabelaStatusImportacoes from '../admin/TabelaStatusImportacoes';
-import PainelEnriquecimento from '../admin/PainelEnriquecimento';
 
-export default function AdminPage() {
-  const [distribuidorasSelecionadas, setDistribuidorasSelecionadas] = useState<string[]>([]);
-  const [anosSelecionados, setAnosSelecionados] = useState<number[]>([]);
+export default function PainelLeadsRaw() {
+  const [leads, setLeads] = useState([]);
+  const [selecionados, setSelecionados] = useState<string[]>([]);
+
+  useEffect(() => {
+    getLeadsRaw().then(setLeads);
+  }, []);
+
+  const handleEnriquecerGeo = async () => {
+    await enrichGeo(selecionados);
+  };
+
+  const handleEnriquecerCNPJ = async () => {
+    await enrichCNPJ(selecionados);
+  };
 
   return (
-    <div className="bg-zinc-900 border border-zinc-700 text-white rounded-xl shadow p-6">
-      <h1 className="text-4xl font-bold text-center text-white mb-10">
-
-        📊 Painel de Administração de Dados
-      </h1>
-
-
-
-      {/* Importação */}
-      <section className="mb-10">
-        <div className="flex flex-wrap gap-6 items-end bg-zinc-900 border border-zinc-700 text-white p-6 rounded-xl shadow w-fit mb-8">
-        <SelectDistribuidoras onChange={setDistribuidorasSelecionadas} />
-        <SelectAnos onChange={setAnosSelecionados} />
-        <ButtonImportar distribuidoras={distribuidorasSelecionadas} anos={anosSelecionados} />
-        </div>
-
-      </section>
-
-      {/* Status de importações */}
-      <section className="mb-10">
-        <TabelaStatusImportacoes />
-      </section>
-
-      {/* Enriquecimento */}
-      <section className="mb-10">
-        <PainelEnriquecimento />
-      </section>
+    <div>
+      <h2>Leads Raw</h2>
+      <table>
+        <thead>
+          <tr>
+            <th></th>
+            <th>ID</th>
+            <th>Bairro</th>
+            <th>Distribuidora</th>
+          </tr>
+        </thead>
+        <tbody>
+          {leads.map((lead: any) => (
+            <tr key={lead.id}>
+              <td>
+                <input
+                  type="checkbox"
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setSelecionados((prev) =>
+                      checked ? [...prev, lead.id] : prev.filter((id) => id !== lead.id)
+                    );
+                  }}
+                />
+              </td>
+              <td>{lead.id}</td>
+              <td>{lead.bairro}</td>
+              <td>{lead.distribuidora}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <button onClick={handleEnriquecerGeo}>Enriquecer com Google</button>
+      <button onClick={handleEnriquecerCNPJ}>Enriquecer com CNPJ</button>
     </div>
   );
 }
-
