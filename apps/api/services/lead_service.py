@@ -34,8 +34,8 @@ async def list_leads(db: AsyncSession, skip: int = 0, limit: int = 100):
             lb.segmento,
             lb.status,
             lb.cnae,
-            lq.dic AS dicBruta,
-            lq.fic AS ficBruta
+            lq.dic AS dicMes,
+            lq.fic AS ficMes
         FROM lead_bruto lb
         LEFT JOIN geo_info_lead gi ON lb.id = gi.lead_id
         LEFT JOIN lead_energia le ON lb.id = le.lead_id
@@ -56,10 +56,14 @@ async def list_leads(db: AsyncSession, skip: int = 0, limit: int = 100):
     leads = []
     for row in rows:
         data = dict(row)
-        data["dicMes"] = parse_array_text(data.get("dicBruta"))
-        data["ficMes"] = parse_array_text(data.get("ficBruta"))
-        data.pop("dicBruta", None)
-        data.pop("ficBruta", None)
+        dic_array = parse_array_text(data.get("dicMes"))
+        fic_array = parse_array_text(data.get("ficMes"))
+
+        data["dicMes"] = dic_array
+        data["ficMes"] = fic_array
+        data["dicMed"] = round(sum(dic_array) / len(dic_array), 2) if dic_array else None
+        data["ficMed"] = round(sum(fic_array) / len(fic_array), 2) if fic_array else None
+
         leads.append(LeadOut(**data))
 
     return total, leads
@@ -83,8 +87,8 @@ async def get_lead(db: AsyncSession, lead_id: str) -> LeadDetail | None:
             lb.status,
             lb.cnae,
             lb.data_conexao,
-            lq.dic AS dicBruta,
-            lq.fic AS ficBruta
+            lq.dic AS dicMes,
+            lq.fic AS ficMes
         FROM lead_bruto lb
         LEFT JOIN geo_info_lead gi ON lb.id = gi.lead_id
         LEFT JOIN lead_energia le ON lb.id = le.lead_id
@@ -98,32 +102,38 @@ async def get_lead(db: AsyncSession, lead_id: str) -> LeadDetail | None:
         return None
 
     data = dict(row)
-    data["dicMes"] = parse_array_text(data.get("dicBruta"))
-    data["ficMes"] = parse_array_text(data.get("ficBruta"))
-    data["dicMed"] = round(sum(data["dicMes"]) / len(data["dicMes"]), 2) if data["dicMes"] else None
-    data["ficMed"] = round(sum(data["ficMes"]) / len(data["ficMes"]), 2) if data["ficMes"] else None
-    data.pop("dicBruta", None)
-    data.pop("ficBruta", None)
+    dic_array = parse_array_text(data.get("dicMes"))
+    fic_array = parse_array_text(data.get("ficMes"))
+
+    data["dicMes"] = dic_array
+    data["ficMes"] = fic_array
+    data["dicMed"] = round(sum(dic_array) / len(dic_array), 2) if dic_array else None
+    data["ficMed"] = round(sum(fic_array) / len(fic_array), 2) if fic_array else None
 
     return LeadDetail(**data)
 
 async def get_qualidade(db: AsyncSession, lead_id: str) -> LeadQualidade | None:
     query = text("""
         SELECT
-            dic AS dicMed,
-            fic AS ficMed
+            dic,
+            fic
         FROM lead_qualidade
         WHERE lead_id = :lead_id
     """)
     result = await db.execute(query, {"lead_id": lead_id})
-    row = result.first()
+    row = result.mappings().first()
     if not row:
         return None
 
-    data = dict(row._mapping)
-    data["dicMes"] = parse_array_text(data.get("dicMed"))
-    data["ficMes"] = parse_array_text(data.get("ficMed"))
-    return LeadQualidade(**data)
+    dic_array = parse_array_text(row["dic"])
+    fic_array = parse_array_text(row["fic"])
+
+    return LeadQualidade(
+        dicMes=dic_array,
+        ficMes=fic_array,
+        dicMed=round(sum(dic_array) / len(dic_array), 2) if dic_array else None,
+        ficMed=round(sum(fic_array) / len(fic_array), 2) if fic_array else None
+    )
 
 async def get_map_points(db: AsyncSession, status: str | None, distribuidora: str | None, limit: int = 1000):
     query = text("""
