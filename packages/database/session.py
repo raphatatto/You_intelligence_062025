@@ -1,7 +1,7 @@
 # packages/database/session.py
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
-from apps.api.config import get_settings
+from apps.api.services.config import get_settings
 
 settings = get_settings()
 
