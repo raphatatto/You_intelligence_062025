@@ -26,9 +26,10 @@ def get_db_connection():
 
 
 @contextmanager
-def get_db_cursor(commit=False):
+def get_db_cursor(commit=False, dict_cursor=True):
     with get_db_connection() as conn:
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cursor_factory = RealDictCursor if dict_cursor else None
+        with conn.cursor(cursor_factory=cursor_factory) as cur:
             try:
                 yield cur
                 if commit:
