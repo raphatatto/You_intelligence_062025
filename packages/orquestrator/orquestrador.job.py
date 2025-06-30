@@ -56,6 +56,6 @@ if __name__ == "__main__":
     # Exemplo local
     DISTRIBUIDORAS = [
         {"nome": "ENEL DISTRIBUIÇÃO RIO", "prefixo": "Enel_RJ_383", "ano": 2023},
-        {"nome": "CPFL PAULISTA", "prefixo": "CPFL_Paulista_63", "ano": 2022},
+        {"nome": "CPFL PAULISTA", "prefixo": "CPFL_Paulista_63", "ano": 2023},
     ]
     asyncio.run(rodar_orquestrador(DISTRIBUIDORAS))

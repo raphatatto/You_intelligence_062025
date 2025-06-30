@@ -9,7 +9,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # ─── CONFIGURAÇÃO ───────────────────────────────────────────────
 DISTRIBUIDORA = "enel_rj"
 ANO = "2023"
-CAMADAS_ALVO = ["UCAT_tab", "UCMT_tab", "UCBT_tab"]
+CAMADAS_ALVO = ["UCAT_tab", "UCMT_tab", "UCBT_tab","PONNOT"]
 DOWNLOAD_FOLDER = Path("data/downloads")
 
 # ─── ENCONTRAR O ZIP E A PASTA EXTRAÍDA ─────────────────────────
