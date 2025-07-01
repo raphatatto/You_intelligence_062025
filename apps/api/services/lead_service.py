@@ -12,40 +12,40 @@ def parse_array_text(text: str | None) -> list[float] | None:
     if not text:
         return None
     try:
-        return [float(x) for x in text.strip("{}").split(",")]
+        return [float(x) for x in text.strip("{} ").split(",") if x]
     except Exception:
         return None
 
 async def list_leads(db: AsyncSession, skip: int = 0, limit: int = 100):
     query = text("""
         SELECT
-            lb.id,
-            lb.nome_uc AS nome,
-            lb.cnpj,
-            lb.classe,
-            lb.subgrupo,
-            lb.modalidade,
-            gi.estado,
-            gi.cidade AS municipio,
-            lb.distribuidora,
-            le.potencia,
-            (lb.coordenadas->>'lat')::float AS latitude,
-            (lb.coordenadas->>'lng')::float AS longitude,
-            lb.segmento,
-            lb.status,
-            lb.cnae,
+            l.id,
+            i.nome_fantasia AS nome,
+            i.cnpj,
+            uc.classe,
+            uc.grupo_tensao AS subgrupo,
+            uc.modalidade,
+            i.uf AS estado,
+            i.municipio,
+            l.distribuidora,
+            uc.potencia,
+            l.latitude,
+            l.longitude,
+            uc.segmento,
+            l.status,
+            uc.cnae,
             lq.dic AS dicMes,
             lq.fic AS ficMes
-        FROM lead_bruto lb
-        LEFT JOIN geo_info_lead gi ON lb.id = gi.lead_id
-        LEFT JOIN lead_energia le ON lb.id = le.lead_id
-        LEFT JOIN lead_qualidade lq ON lb.id = lq.lead_id
-        ORDER BY lb.nome_uc
+        FROM plead.lead l
+        LEFT JOIN plead.info_leads i ON l.id = i.lead_id
+        LEFT JOIN plead.unidade_consumidora uc ON l.id = uc.lead_id
+        LEFT JOIN plead.lead_qualidade lq ON uc.id = lq.uc_id
+        ORDER BY i.nome_fantasia
         OFFSET :skip
         LIMIT :limit
     """)
 
-    total_query = text("SELECT COUNT(*) FROM lead_bruto")
+    total_query = text("SELECT COUNT(*) FROM plead.lead")
 
     result = await db.execute(query, {"skip": skip, "limit": limit})
     rows = result.mappings().all()
@@ -71,29 +71,29 @@ async def list_leads(db: AsyncSession, skip: int = 0, limit: int = 100):
 async def get_lead(db: AsyncSession, lead_id: str) -> LeadDetail | None:
     query = text("""
         SELECT
-            lb.id,
-            lb.nome_uc AS nome,
-            lb.cnpj,
-            lb.classe,
-            lb.subgrupo,
-            lb.modalidade,
-            gi.estado,
-            gi.cidade AS municipio,
-            lb.distribuidora,
-            le.potencia,
-            (lb.coordenadas->>'lat')::float AS latitude,
-            (lb.coordenadas->>'lng')::float AS longitude,
-            lb.segmento,
-            lb.status,
-            lb.cnae,
-            lb.data_conexao,
+            l.id,
+            i.nome_fantasia AS nome,
+            i.cnpj,
+            uc.classe,
+            uc.grupo_tensao AS subgrupo,
+            uc.modalidade,
+            i.uf AS estado,
+            i.municipio,
+            l.distribuidora,
+            uc.potencia,
+            l.latitude,
+            l.longitude,
+            uc.segmento,
+            l.status,
+            uc.cnae,
+            uc.data_conexao,
             lq.dic AS dicMes,
             lq.fic AS ficMes
-        FROM lead_bruto lb
-        LEFT JOIN geo_info_lead gi ON lb.id = gi.lead_id
-        LEFT JOIN lead_energia le ON lb.id = le.lead_id
-        LEFT JOIN lead_qualidade lq ON lb.id = lq.lead_id
-        WHERE lb.id = :lead_id
+        FROM plead.lead l
+        LEFT JOIN plead.info_leads i ON l.id = i.lead_id
+        LEFT JOIN plead.unidade_consumidora uc ON l.id = uc.lead_id
+        LEFT JOIN plead.lead_qualidade lq ON uc.id = lq.uc_id
+        WHERE l.id = :lead_id
     """)
 
     result = await db.execute(query, {"lead_id": lead_id})
@@ -117,7 +117,7 @@ async def get_qualidade(db: AsyncSession, lead_id: str) -> LeadQualidade | None:
         SELECT
             dic,
             fic
-        FROM lead_qualidade
+        FROM plead.lead_qualidade
         WHERE lead_id = :lead_id
     """)
     result = await db.execute(query, {"lead_id": lead_id})
@@ -138,18 +138,18 @@ async def get_qualidade(db: AsyncSession, lead_id: str) -> LeadQualidade | None:
 async def get_map_points(db: AsyncSession, status: str | None, distribuidora: str | None, limit: int = 1000):
     query = text("""
         SELECT
-            lb.id,
-            (lb.coordenadas->>'lat')::float AS latitude,
-            (lb.coordenadas->>'lng')::float AS longitude,
-            lb.classe,
-            lb.subgrupo,
-            le.potencia,
-            lb.distribuidora,
-            lb.status
-        FROM lead_bruto lb
-        LEFT JOIN lead_energia le ON lb.id = le.lead_id
-        WHERE (:status IS NULL OR lb.status = :status)
-          AND (:distribuidora IS NULL OR lb.distribuidora = :distribuidora)
+            l.id,
+            l.latitude,
+            l.longitude,
+            uc.classe,
+            uc.grupo_tensao AS subgrupo,
+            uc.potencia,
+            l.distribuidora,
+            l.status
+        FROM plead.lead l
+        LEFT JOIN plead.unidade_consumidora uc ON l.id = uc.lead_id
+        WHERE (:status IS NULL OR l.status = :status)
+          AND (:distribuidora IS NULL OR l.distribuidora = :distribuidora)
         LIMIT :limit
     """)
     result = await db.execute(query, {
@@ -162,12 +162,13 @@ async def get_map_points(db: AsyncSession, status: str | None, distribuidora: st
 async def heatmap_points(db: AsyncSession, segment: str | None):
     query = text("""
         SELECT
-            (lb.coordenadas->>'lat')::float AS latitude,
-            (lb.coordenadas->>'lng')::float AS longitude,
+            l.latitude,
+            l.longitude,
             COUNT(*) as peso
-        FROM lead_bruto lb
-        WHERE (:segment IS NULL OR lb.segmento = :segment)
-        GROUP BY latitude, longitude
+        FROM plead.lead l
+        LEFT JOIN plead.unidade_consumidora uc ON l.id = uc.lead_id
+        WHERE (:segment IS NULL OR uc.segmento = :segment)
+        GROUP BY l.latitude, l.longitude
     """)
     result = await db.execute(query, {"segment": segment})
     return [tuple(row) for row in result]
@@ -176,17 +177,18 @@ async def get_resumo(db: AsyncSession, estado: str | None, municipio: str | None
     query = text("""
         SELECT
             COUNT(*) AS total_leads,
-            COUNT(cnpj) FILTER (WHERE cnpj IS NOT NULL) AS total_com_cnpj,
-            COUNT(*) FILTER (WHERE status = 'enriquecido') AS total_enriquecidos,
-            AVG(le.consumo_medio) AS media_consumo,
-            AVG(le.potencia) AS media_potencia,
-            json_object_agg(classe, count(*)) FILTER (WHERE classe IS NOT NULL) AS por_classe
-        FROM lead_bruto lb
-        LEFT JOIN geo_info_lead gi ON lb.id = gi.lead_id
-        LEFT JOIN lead_energia le ON lb.id = le.lead_id
-        WHERE (:estado IS NULL OR gi.estado = :estado)
-          AND (:municipio IS NULL OR gi.cidade = :municipio)
-          AND (:segmento IS NULL OR lb.segmento = :segmento)
+            COUNT(i.cnpj) FILTER (WHERE i.cnpj IS NOT NULL) AS total_com_cnpj,
+            COUNT(*) FILTER (WHERE l.status = 'enriquecido') AS total_enriquecidos,
+            AVG(uc.consumo_medio) AS media_consumo,
+            AVG(uc.potencia) AS media_potencia,
+            json_object_agg(uc.classe, count(*)) FILTER (WHERE uc.classe IS NOT NULL) AS por_classe
+        FROM plead.lead l
+        LEFT JOIN plead.info_leads i ON l.id = i.lead_id
+        LEFT JOIN plead.unidade_consumidora uc ON l.id = uc.lead_id
+        WHERE (:estado IS NULL OR i.uf = :estado)
+        AND (:municipio IS NULL OR i.municipio = :municipio)
+        AND (:segmento IS NULL OR uc.segmento = :segmento)
+
     """)
     result = await db.execute(query, {
         "estado": estado,

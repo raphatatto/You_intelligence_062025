@@ -4,10 +4,10 @@ from packages.database.session import get_session
 from apps.api.schemas.lead import (
     LeadList,
     LeadOut,
-    LeadDetail,        # só se existir mesmo no schema
+    LeadDetail,
     LeadMapOut,
     LeadResumo,
-    LeadQualidade,     # precisa estar declarado no schemas/lead.py
+    LeadQualidade,
 )
 from apps.api.services import lead_service
 
