@@ -6,7 +6,7 @@ export type Lead = {
   classe: string // ex: 'Comercial', 'Industrial', etc.
   subgrupo: string | null // ex: 'A4', 'B1', etc.
   modalidade: string // ex: 'Convencional', 'Horosazonal'
-  estado: string | null // 'SP', 'RJ', etc.
+  uf: string | null// 'SP', 'RJ', etc.
   municipio: string | null // nome da cidade
   distribuidora: string // nome ou código da distribuidora
   potencia: number // em kW

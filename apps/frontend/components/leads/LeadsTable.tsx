@@ -32,7 +32,7 @@ export default function LeadsTable({
   if (!leads.length) {
     return <p className="text-sm text-gray-400">Nenhum lead encontrado.</p>;
   }
-
+  {console.log("IDs duplicados?", leads.map((l) => l.id))} 
   return (
     <div className="overflow-x-auto rounded-xl border border-zinc-700 bg-zinc-900 shadow-lg">
       <table className="min-w-full text-sm text-zinc-200">
@@ -49,9 +49,11 @@ export default function LeadsTable({
           </tr>
         </thead>
         <tbody>
-          {leads.map((l: Lead) => (
+        {leads.map((l: Lead, index: number) => {
+          console.log(`[${index}] ID renderizado:`, l.id);
+          return (
             <tr
-              key={l.id}
+              key={`${l.id}-${index}`}
               id={`lead-row-${l.id}`}
               onClick={() => router.push(`/mapa?id=${l.id}`)}
               className={`cursor-pointer border-b border-zinc-700 hover:bg-zinc-800 transition-all ${
@@ -65,12 +67,13 @@ export default function LeadsTable({
               <td className="px-4 py-2">{l.dicMed ?? '—'}</td>
               <td className="px-4 py-2">{l.ficMed ?? '—'}</td>
               <td className="px-4 py-2 capitalize whitespace-nowrap">{l.cnae ?? '—'}</td>
-              <td className="px-4 py-2 uppercase">{l.estado ?? '—'}</td>
+              <td className="px-4 py-2 uppercase">{l.uf ?? '—'}</td>
               <td className="px-4 py-2 uppercase">{l.distribuidora ?? '—'}</td>
               <td className="px-4 py-2">{l.segmento ?? '—'}</td>
             </tr>
-          ))}
-        </tbody>
+          );
+        })}
+      </tbody>
       </table>
 
       {/* Paginação */}
