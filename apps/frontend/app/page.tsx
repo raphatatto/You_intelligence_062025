@@ -7,7 +7,7 @@ import { countByEstado, calcularEnergiaMapeada } from '@/utils/analytics';
 import BarLeadsEstado from '@/components/charts/BarLeadsEstados';
 
 export default function Dashboard() {
-  const { data: leads = [] } = useLeads();
+  const { leads = [], isLoading, error } = useLeads(); // ✅ certo
   const dataEstado = countByEstado(leads);
   const energiaTotal = calcularEnergiaMapeada(leads);
 

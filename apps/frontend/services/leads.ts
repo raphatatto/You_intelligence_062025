@@ -1,43 +1,35 @@
 import useSWR from 'swr'
-import type { Lead, LeadList } from '@/app/types/lead'
-import type { LeadsTableProps } from '@/app/types/props';
+import type { Lead } from '@/app/types/lead'
+import { CNAE_SEGMENTOS } from '@/utils/cnae'
 const base = process.env.NEXT_PUBLIC_API_BASE ?? ''
 
-const fetcher = (url: string) =>
-  fetch(`${base}${url}`).then((r) => {
-    if (!r.ok) throw new Error('Erro ao carregar leads da API')
-    return r.json() as Promise<LeadList>
-  })
+const fetcher = async (url: string): Promise<Lead[]> => {
+  const res = await fetch(`${base}${url}`);
+  if (!res.ok) throw new Error('Erro ao carregar leads da API');
+  const raw = await res.json();
+    return raw.map((item: any) => ({
+    id: item.COD_ID,
+    dicMed: item.dic_med,
+    ficMed: item.fic_med,
+    cnae: item.CNAE,
+    bairro: item.BRR,
+    cep: item.CEP,
+    estado: 'SP',
+    distribuidora: String(item.DIST),
+    segmento: CNAE_SEGMENTOS[item.CNAE] ?? 'Outro',
+  }));
+};
 
-export function useLeads(
-  page = 1,
-  filters: Partial<LeadsTableProps> = {},
-  limit = 100
-) {
-  const skip = (page - 1) * limit;
-
-  const query = new URLSearchParams({
-    skip: skip.toString(),
-    limit: limit.toString(),
-    ...(filters.estado && { estado: filters.estado }),
-    ...(filters.distribuidora && { distribuidora: filters.distribuidora }),
-    ...(filters.segmento && { segmento: filters.segmento }),
-    ...(filters.busca && { busca: filters.busca }),
-    ...(filters.order && { order: filters.order }),
-  });
-
-  const url = `/v1/leads?${query.toString()}`;
-
-  const { data, error, isValidating } = useSWR<LeadList>(url, fetcher, {
+export function useLeads() {
+  const { data, error, isValidating } = useSWR<Lead[]>('/ucmt/top', fetcher, {
     revalidateOnFocus: false,
     onErrorRetry: () => {},
-  });
+  })
 
   return {
-    leads: data?.items ?? [],
-    total: data?.total ?? 0,
+    leads: data ?? [],
+    total: data?.length ?? 0,
     isLoading: isValidating,
     error,
-  };
+  }
 }
-
