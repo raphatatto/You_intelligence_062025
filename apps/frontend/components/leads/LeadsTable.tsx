@@ -23,7 +23,7 @@ export default function LeadsTable({ rows }: Props) {
             <th className="px-4 py-2 text-xs uppercase tracking-wider w-[160px]">ID</th>
             <th className="px-4 py-2 text-xs uppercase tracking-wider">Dic</th>
             <th className="px-4 py-2 text-xs uppercase tracking-wider">Fic</th>
-            <th className="px-4 py-2 text-xs uppercase tracking-wider whitespace-nowrap">CNAE</th>
+            <th className="px-4 py-2 text-xs uppercase tracking-wider ">CNAE</th>
             <th className="px-4 py-2 text-xs uppercase tracking-wider">Bairro</th>
             <th className="px-4 py-2 text-xs uppercase tracking-wider">CEP</th>
             <th className="px-4 py-2 text-xs uppercase tracking-wider">Estado</th>
@@ -43,7 +43,7 @@ export default function LeadsTable({ rows }: Props) {
               </td>
               <td className="px-4 py-2">{l.dicMed?.toFixed(2) ?? '—'}</td>
               <td className="px-4 py-2">{l.ficMed?.toFixed(2) ?? '—'}</td>
-              <td className="px-4 py-2 whitespace-nowrap">{l.cnae ?? '—'}</td>
+              <td className="px-4 py-2">{l.cnae ?? '—'}</td>
               <td className="px-4 py-2">{l.bairro ?? '—'}</td>
               <td className="px-4 py-2 whitespace-nowrap">{l.cep ?? '—'}</td>
               <td className="px-4 py-2">{l.estado ?? '—'}</td>
