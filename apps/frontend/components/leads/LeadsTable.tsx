@@ -43,9 +43,9 @@ export default function LeadsTable({ rows }: Props) {
               </td>
               <td className="px-4 py-2">{l.dicMed?.toFixed(2) ?? '—'}</td>
               <td className="px-4 py-2">{l.ficMed?.toFixed(2) ?? '—'}</td>
-              <td className="px-4 py-2">{l.cnae ?? '—'}</td>
+              <td className="px-4 py-2 whitespace-nowrap">{l.cnae ?? '—'}</td>
               <td className="px-4 py-2">{l.bairro ?? '—'}</td>
-              <td className="px-4 py-2">{l.cep ?? '—'}</td>
+              <td className="px-4 py-2 whitespace-nowrap">{l.cep ?? '—'}</td>
               <td className="px-4 py-2">{l.estado ?? '—'}</td>
               <td className="px-4 py-2">{l.distribuidora ?? '—'}</td>
               <td className="px-4 py-2">{l.segmento ?? '—'}</td>

@@ -21,7 +21,7 @@ const fetcher = async (url: string): Promise<Lead[]> => {
 };
 
 export function useLeads() {
-  const { data, error, isValidating } = useSWR<Lead[]>('/ucmt/top', fetcher, {
+  const { data, error, isValidating } = useSWR<Lead[]>('/ucmt', fetcher, {
     revalidateOnFocus: false,
     onErrorRetry: () => {},
   })
