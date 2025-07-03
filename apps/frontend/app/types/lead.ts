@@ -7,5 +7,9 @@ export type Lead = {
   cep: string
   estado: string
   distribuidora: string
+  codigoDistribuidora: string 
   segmento: string
+  descricao?: string
+  lat: number
+  lng: number
 }
