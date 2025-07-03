@@ -1,157 +1,138 @@
-import os
-import io
-import hashlib
+# packages/jobs/importers/importer_ucat_job.py
+
 import pandas as pd
 import geopandas as gpd
 from pathlib import Path
+from tqdm import tqdm
+from psycopg2.extras import execute_batch
 from fiona import listlayers
-from dotenv import load_dotenv
-from datetime import datetime
+
 from packages.database.connection import get_db_cursor
+from packages.jobs.utils.rastreio import registrar_status
 
-load_dotenv()
+# Se quiser detectar dinamicamente:
+def _detect_layer(gdb_path: Path) -> str:
+    layers = listlayers(str(gdb_path))
+    return next(l for l in layers if l.upper().startswith("UCAT"))
 
-def _to_pg_array(data):
-    def fmt(lst):
-        return "{" + ",".join(map(str, lst)) + "}" if len(lst) > 0 else r"\N"
-    return pd.Series([fmt(row) for row in data])
+BATCH_SIZE = 5_000
 
-def hash_endereco(bairro: str, cep: str, municipio: str, distribuidora: str) -> str:
-    texto = f"{bairro or ''}-{cep or ''}-{municipio or ''}-{distribuidora or ''}".lower()
-    return hashlib.sha256(texto.encode("utf-8")).hexdigest()
+def _chunkify(df: pd.DataFrame, size: int = BATCH_SIZE):
+    records = df.to_dict("records")
+    for i in range(0, len(records), size):
+        yield records[i : i + size]
 
-def normalizar_cep(cep: str) -> str:
-    if not cep:
-        return ""
-    return ''.join(filter(str.isdigit, str(cep)))[:8]  # Ex: "99999.999-" → "99999999"
-
-def main(gdb_path: Path, distribuidora: str, ano: int, camada: str = "UCAT_tab"):
-    if camada not in listlayers(gdb_path):
-        print(f"❌ Camada {camada} não encontrada em {gdb_path.name}")
-        return
-
-    print(f"📥 Lendo camada '{camada}' do arquivo {gdb_path.name}")
-    df = gpd.read_file(gdb_path, layer=camada)
-    
+def main(
+    gdb_path: Path,
+    distribuidora: str,
+    ano: int,
+    prefixo: str,
+    camada: str = "UCAT_tab",
+    modo_debug: bool = False,
+):
+    registrar_status(prefixo, ano, camada, "started")
     try:
-        # Remove colunas sujas
-        col_sujas = df.columns[df.astype(str).apply(lambda col: col.str.contains("106022|YEL", na=False)).any()]
-        for col in col_sujas:
-            print(f"🧼 Removendo coluna suja: {col}")
-            df.drop(columns=[col], inplace=True)
+        # identifica o nome exato da layer
+        layer_name = _detect_layer(gdb_path)
+        tqdm.write(f"📖 Lendo camada '{layer_name}' do GDB...")
+        gdf = gpd.read_file(str(gdb_path), layer=layer_name)
+        total = len(gdf)
+        tqdm.write(f"   → {total} feições encontradas.")
 
-        # Normaliza CEPs
-        df["CEP"] = df["CEP"].astype(str).apply(normalizar_cep)
-
-        # Gera o id_interno
-        df["id_interno"] = df.apply(lambda row: hash_endereco(row.get("BRR"), row.get("CEP"), row.get("MUN"), distribuidora), axis=1)
-
-        # Remove duplicatas já existentes por COD_ID
-        with get_db_cursor() as cur_check:
-            cur_check.execute("SELECT cod_id FROM plead.unidade_consumidora WHERE cod_id = ANY(%s)", (list(df["COD_ID"]),))
-            cods_existentes = {row[0] for row in cur_check.fetchall()}
-        df = df[~df["COD_ID"].isin(cods_existentes)]
-
-        if df.empty:
-            print("⚠️ Nenhum novo registro UCAT para importar.")
-            return
-
-        # Tabela plead.lead
-        df_lead = df[["id_interno", "CEP", "BRR", "MUN"]].drop_duplicates(subset="id_interno").copy()
-        df_lead["id"] = df_lead["id_interno"]
-        df_lead["bairro"] = df_lead["BRR"]
-        df_lead["cep"] = df_lead["CEP"]
-        df_lead["municipio_ibge"] = df_lead["MUN"]
-        df_lead["distribuidora"] = distribuidora
-        df_lead["status"] = "raw"
-        df_lead["ultima_atualizacao"] = datetime.utcnow()
-        df_lead = df_lead[["id", "id_interno", "bairro", "cep", "municipio_ibge", "distribuidora", "status", "ultima_atualizacao"]]
-
-        # Tabela plead.unidade_consumidora
-        df_uc = pd.DataFrame({
-            "id": df["COD_ID"],
-            "cod_id": df["COD_ID"],
-            "lead_id": df["id_interno"],
-            "origem": camada,
-            "ano": ano,
-            "data_conexao": pd.to_datetime(df.get("DAT_CON"), errors="coerce"),
-            "tipo_sistema": df.get("TIP_SIST"),
-            "grupo_tensao": df.get("GRU_TEN"),
-            "modalidade": df.get("GRU_TAR"),
-            "situacao": df.get("SIT_ATIV"),
-            "classe": df.get("CLAS_SUB"),
-            "segmento": df.get("CONJ"),
-            "subestacao": df.get("SUB"),
-            "cnae": df.get("CNAE"),
-            "descricao": df.get("DESCR"),
-            "potencia": df.get("PN_CON", pd.Series([0]*len(df))).fillna(0).astype(float)
+        # 1) lead_bruto
+        df_bruto = pd.DataFrame({
+            "cod_id":            gdf["COD_ID"],
+            "cod_distribuidora": distribuidora,
+            "origem":            "UCAT",
+            "ano":               ano,
+            "status":            "raw",
+            "data_conexao":      pd.to_datetime(gdf.get("DAT_CON", None), errors="coerce"),
+            "cnae":              gdf.get("CNAE", None),
+            "grupo_tensao":      gdf.get("GRU_TEN", None),
+            "modalidade":        gdf.get("GRU_TAR", None),
+            "tipo_sistema":      gdf.get("TIP_SIST", None),
+            "situacao":          gdf.get("SIT_ATIV", None),
+            "classe":            gdf.get("CLAS_SUB", None),
+            "segmento":          gdf.get("CONJ", None),
+            "subestacao":        None,
+            "municipio_ibge":    gdf.get("MUN", None),
+            "bairro":            gdf.get("BRR", None),
+            "cep":               gdf.get("CEP", None),
+            "pac":               gdf.get("PAC", None),
+            "pn_con":            gdf.get("PN_CON", None),
+            "descricao":         gdf.get("DESCR", "").fillna(""),
         })
 
-        # Energia
-        ene_p = [c for c in df.columns if c.startswith("ENE_P_")]
-        ene_f = [c for c in df.columns if c.startswith("ENE_F_")]
-        arr_ene = df[ene_p + ene_f].fillna(0).astype(int).values if ene_p and ene_f else []
-        df_energia = pd.DataFrame({
-            "id": df["COD_ID"],
-            "uc_id": df["COD_ID"],
-            "ene": _to_pg_array(arr_ene) if len(arr_ene) else None,
-            "potencia": df.get("PN_CON", pd.Series([0]*len(df))).fillna(0).astype(float)
-        })
-
-        # Demanda
-        dem_p = [c for c in df.columns if c.startswith("DEM_P_")]
-        dem_f = [c for c in df.columns if c.startswith("DEM_F_")]
+        # 2) lead_demanda (média anual a partir de DEM_P_XX e DEM_F_XX)
+        cols_p = [f"DEM_P_{i:02d}" for i in range(1, 13)]
+        cols_f = [f"DEM_F_{i:02d}" for i in range(1, 13)]
         df_demanda = pd.DataFrame({
-            "id": df["COD_ID"],
-            "uc_id": df["COD_ID"],
-            "dem_ponta": _to_pg_array(df[dem_p].fillna(0).astype(int).values) if dem_p else None,
-            "dem_fora_ponta": _to_pg_array(df[dem_f].fillna(0).astype(int).values) if dem_f else None,
+            "cod_distribuidora": distribuidora,
+            "cod_id":            gdf["COD_ID"],
+            "ano":               ano,
+            "dem_ponta":         gdf[cols_p].mean(axis=1),
+            "dem_fora_ponta":    gdf[cols_f].mean(axis=1),
         })
 
-        # Continuação após df_demanda...
-
-        # Qualidade
-        dic = [c for c in df.columns if c.startswith("DIC_")]
-        fic = [c for c in df.columns if c.startswith("FIC_")]
-        df_qualidade = pd.DataFrame({
-            "id": df["COD_ID"],
-            "uc_id": df["COD_ID"],
-            "dic": _to_pg_array(df[dic].fillna(0).astype(int).values) if dic else None,
-            "fic": _to_pg_array(df[fic].fillna(0).astype(int).values) if fic else None
+        # 3) lead_energia — exemplo com ENE_P_XX e ENE_F_XX
+        cols_ep = [f"ENE_P_{i:02d}" for i in range(1, 13)]
+        cols_ef = [f"ENE_F_{i:02d}" for i in range(1, 13)]
+        df_energia = pd.DataFrame({
+            "cod_distribuidora": distribuidora,
+            "cod_id":            gdf["COD_ID"],
+            "ano":               ano,
+            "consumo":           gdf[cols_ep + cols_ef].sum(axis=1),
+            "potencia":          gdf[cols_ep + cols_ef].max(axis=1),
         })
 
-        # Inserções em todas as tabelas
+        # SQL statements
+        sql_bruto = """
+            INSERT INTO lead_bruto (
+                cod_id, cod_distribuidora, origem, ano, status, data_conexao,
+                cnae, grupo_tensao, modalidade, tipo_sistema, situacao, classe,
+                segmento, subestacao, municipio_ibge, bairro, cep,
+                pac, pn_con, descricao
+            ) VALUES (
+                %(cod_id)s, %(cod_distribuidora)s, %(origem)s, %(ano)s, %(status)s,
+                %(data_conexao)s, %(cnae)s, %(grupo_tensao)s, %(modalidade)s,
+                %(tipo_sistema)s, %(situacao)s, %(classe)s, %(segmento)s,
+                %(subestacao)s, %(municipio_ibge)s, %(bairro)s, %(cep)s,
+                %(pac)s, %(pn_con)s, %(descricao)s
+            ) ON CONFLICT (cod_distribuidora, cod_id, ano) DO NOTHING
+        """
+        sql_demanda = """
+            INSERT INTO lead_demanda (
+                cod_distribuidora, cod_id, ano, dem_ponta, dem_fora_ponta
+            ) VALUES (
+                %(cod_distribuidora)s, %(cod_id)s, %(ano)s, %(dem_ponta)s, %(dem_fora_ponta)s
+            ) ON CONFLICT (cod_distribuidora, cod_id, ano) DO NOTHING
+        """
+        sql_energia = """
+            INSERT INTO lead_energia (
+                cod_distribuidora, cod_id, ano, consumo, potencia
+            ) VALUES (
+                %(cod_distribuidora)s, %(cod_id)s, %(ano)s, %(consumo)s, %(potencia)s
+            ) ON CONFLICT (cod_distribuidora, cod_id, ano) DO NOTHING
+        """
+
+        # Batch inserts
         with get_db_cursor(commit=True) as cur:
-            for table, df_data in [
-                ("plead.lead", df_lead),
-                ("plead.unidade_consumidora", df_uc),
-                ("plead.lead_energia", df_energia),
-                ("plead.lead_demanda", df_demanda),
-                ("plead.lead_qualidade", df_qualidade)
-            ]:
-                if df_data.empty: continue
-                buf = io.StringIO()
-                df_data.to_csv(buf, index=False, header=False, na_rep=r"\N")
-                buf.seek(0)
-                cur.copy_expert(
-                    f"COPY {table} ({','.join(df_data.columns)}) FROM STDIN WITH (FORMAT csv, NULL '\\N')", buf)
-                print(f"📤 Inseridos {len(df_data)} registros em {table}")
+            for batch in tqdm(_chunkify(df_bruto), desc="UCAT_bruto", unit="batch"):
+                execute_batch(cur, sql_bruto, batch)
+            tqdm.write("✅ lead_bruto inserido")
 
-            cur.execute("""
-                INSERT INTO plead.import_status (distribuidora, ano, camada, status)
-                VALUES (%s, %s, %s, %s)
-                ON CONFLICT (distribuidora, ano, camada)
-                DO UPDATE SET status = EXCLUDED.status, data_execucao = now();
-            """, (distribuidora, ano, camada, "success"))
+            for batch in tqdm(_chunkify(df_demanda), desc="UCAT_demanda", unit="batch"):
+                execute_batch(cur, sql_demanda, batch)
+            tqdm.write("✅ lead_demanda inserido")
 
-        print("✅ UCAT importado com sucesso!")
+            for batch in tqdm(_chunkify(df_energia), desc="UCAT_energia", unit="batch"):
+                execute_batch(cur, sql_energia, batch)
+            tqdm.write("✅ lead_energia inserido")
+
+        registrar_status(prefixo, ano, camada, "success")
 
     except Exception as e:
-        print(f"❌ Erro ao importar UCAT: {e}")
-        with get_db_cursor(commit=True) as cur:
-            cur.execute("""
-                INSERT INTO plead.import_status (distribuidora, ano, camada, status)
-                VALUES (%s, %s, %s, %s)
-                ON CONFLICT (distribuidora, ano, camada)
-                DO UPDATE SET status = EXCLUDED.status, data_execucao = now();
-            """, (distribuidora, ano, camada, "failed"))
+        tqdm.write(f"❌ Erro na importação UCAT: {e}")
+        registrar_status(prefixo, ano, camada, f"failed: {e}")
+        if modo_debug:
+            raise
