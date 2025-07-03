@@ -31,14 +31,7 @@ def main(gdb_path: Path, distribuidora: str, ano: int, camada: str):
     df = gpd.read_file(gdb_path, layer=camada)
 
     try:
-        # ── Limpeza de colunas com dados quebrados ───────────────────────────
-        col_sujas = df.columns[df.astype(str)
-                               .apply(lambda col: col.str.contains("106022|YEL", na=False))
-                               .any()]
-        for col in col_sujas:
-            print(f"🧼 Removendo coluna suja: {col}")
-            df.drop(columns=[col], inplace=True)
-
+        # ── Limpeza de colunas com dados quebrado
         # ── Construção do DataFrame lead_bruto ──────────────────────────────
         df_bruto = pd.DataFrame({
             "id": df["COD_ID"],

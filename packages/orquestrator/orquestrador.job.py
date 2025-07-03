@@ -88,7 +88,7 @@ async def rodar_orquestrador(selecionados: list[dict]):
 
 if __name__ == "__main__":
     DISTRIBUIDORAS = [
-        {"nome": "CPFL PAULISTA",         "prefixo": "CPFL_Paulista_63",   "ano": 2023},
+        # {"nome": "CPFL PAULISTA",         "prefixo": "CPFL_Paulista_63",   "ano": 2023},
         {"nome": "ENEL DISTRIBUIÇÃO RIO", "prefixo": "Enel_RJ_383",         "ano": 2023},
         # ... outros
     ]
