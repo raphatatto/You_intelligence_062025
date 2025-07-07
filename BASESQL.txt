@@ -1,0 +1,205 @@
+-- ================================
+-- SCHEMA
+-- ================================
+CREATE SCHEMA IF NOT EXISTS intel_lead;
+SET search_path TO intel_lead;
+
+-- ================================
+-- ENUMS
+-- ================================
+CREATE TYPE camada_enum AS ENUM ('UCAT', 'UCMT', 'UCBT', 'PONNOT');
+CREATE TYPE status_enum AS ENUM ('pending', 'running', 'completed', 'failed');
+CREATE TYPE origem_enum AS ENUM ('UCAT', 'UCMT', 'UCBT');
+CREATE TYPE resultado_enum AS ENUM ('success', 'partial', 'failed');
+
+-- ================================
+-- TABELAS DE DOMÍNIO
+-- ================================
+CREATE TABLE grupo_tensao (
+    id TEXT PRIMARY KEY,
+    descricao TEXT NOT NULL
+);
+
+CREATE TABLE modalidade_tarifaria (
+    id TEXT PRIMARY KEY,
+    descricao TEXT NOT NULL
+);
+
+CREATE TABLE tipo_sistema (
+    id TEXT PRIMARY KEY,
+    descricao TEXT NOT NULL
+);
+
+CREATE TABLE classe_consumo (
+    id TEXT PRIMARY KEY,
+    descricao TEXT NOT NULL,
+    tipo_cliente TEXT CHECK (tipo_cliente IN ('PF', 'PJ')) NOT NULL
+);
+
+CREATE TABLE situacao_uc (
+    id TEXT PRIMARY KEY,
+    descricao TEXT NOT NULL
+);
+
+CREATE TABLE segmento_mercado (
+    id TEXT PRIMARY KEY,
+    descricao TEXT NOT NULL
+);
+
+CREATE TABLE distribuidora (
+    id INT PRIMARY KEY,
+    nome TEXT NOT NULL
+);
+
+CREATE TABLE municipio (
+    id INT PRIMARY KEY,
+    nome TEXT NOT NULL,
+    uf CHAR(2) NOT NULL
+);
+
+-- ================================
+-- CONTROLE DE IMPORTAÇÕES
+-- ================================
+CREATE TABLE import_status (
+    import_id TEXT PRIMARY KEY,              -- UUID ou qualquer ID gerado pela aplicação
+    distribuidora_id INT REFERENCES distribuidora(id),
+    ano INT NOT NULL,
+    camada camada_enum NOT NULL,
+    status status_enum NOT NULL,
+    linhas_processadas INT,
+    data_inicio TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    data_fim TIMESTAMP,
+    observacoes TEXT
+);
+
+-- ================================
+-- LEAD BRUTO
+-- ================================
+CREATE TABLE lead_bruto (
+    uc_id TEXT PRIMARY KEY,
+    import_id TEXT REFERENCES import_status(import_id),
+    cod_id TEXT NOT NULL,
+    distribuidora_id INT REFERENCES distribuidora(id),
+    origem origem_enum NOT NULL,
+    ano INT NOT NULL,
+    status TEXT DEFAULT 'raw',
+
+    data_conexao DATE,
+    cnae INT,
+    grupo_tensao TEXT REFERENCES grupo_tensao(id),
+    modalidade TEXT REFERENCES modalidade_tarifaria(id),
+    tipo_sistema TEXT REFERENCES tipo_sistema(id),
+    situacao TEXT REFERENCES situacao_uc(id),
+    classe TEXT REFERENCES classe_consumo(id),
+    segmento TEXT REFERENCES segmento_mercado(id),
+
+    subestacao TEXT,
+    municipio_id INT REFERENCES municipio(id),
+    bairro TEXT,
+    cep TEXT,
+    pac INT,
+    pn_con TEXT,
+    descricao TEXT,
+
+    latitude DOUBLE PRECISION,
+    longitude DOUBLE PRECISION,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_lead_distribuidora_ano ON lead_bruto (distribuidora_id, ano);
+CREATE INDEX idx_lead_pncon         ON lead_bruto (pn_con);
+
+-- ================================
+-- ENERGIA MENSAL
+-- ================================
+CREATE TABLE lead_energia_mensal (
+    uc_id TEXT REFERENCES lead_bruto(uc_id) ON DELETE CASCADE,
+    import_id TEXT REFERENCES import_status(import_id),
+    mes INT CHECK (mes BETWEEN 1 AND 12),
+    energia_ponta DOUBLE PRECISION,
+    energia_fora_ponta DOUBLE PRECISION,
+    energia_total DOUBLE PRECISION,
+    origem origem_enum NOT NULL,
+    PRIMARY KEY (uc_id, mes)
+);
+
+-- ================================
+-- DEMANDA MENSAL
+-- ================================
+CREATE TABLE lead_demanda_mensal (
+    uc_id TEXT REFERENCES lead_bruto(uc_id) ON DELETE CASCADE,
+    import_id TEXT REFERENCES import_status(import_id),
+    mes INT CHECK (mes BETWEEN 1 AND 12),
+    demanda_ponta DOUBLE PRECISION,
+    demanda_fora_ponta DOUBLE PRECISION,
+    demanda_total DOUBLE PRECISION,
+    demanda_contratada DOUBLE PRECISION,
+    origem origem_enum NOT NULL,
+    PRIMARY KEY (uc_id, mes)
+);
+
+-- ================================
+-- QUALIDADE MENSAL
+-- ================================
+CREATE TABLE lead_qualidade_mensal (
+    uc_id TEXT REFERENCES lead_bruto(uc_id) ON DELETE CASCADE,
+    import_id TEXT REFERENCES import_status(import_id),
+    mes INT CHECK (mes BETWEEN 1 AND 12),
+    dic DOUBLE PRECISION,
+    fic DOUBLE PRECISION,
+    semrede DOUBLE PRECISION,
+    origem origem_enum NOT NULL,
+    PRIMARY KEY (uc_id, mes)
+);
+
+-- ================================
+-- LOG DE ENRIQUECIMENTO
+-- ================================
+CREATE TABLE lead_enrichment_log (
+    id SERIAL PRIMARY KEY,
+    uc_id TEXT REFERENCES lead_bruto(uc_id),
+    etapa TEXT NOT NULL,
+    resultado resultado_enum NOT NULL,
+    detalhes TEXT,
+    executado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ================================
+-- PONTO NOTÁVEL
+-- ================================
+CREATE TABLE ponto_notavel (
+    pn_id TEXT PRIMARY KEY,
+    latitude DOUBLE PRECISION,
+    longitude DOUBLE PRECISION
+);
+
+-- ================================
+-- VIEW: Leads com coordenadas
+-- ================================
+CREATE VIEW lead_com_coordenadas AS
+SELECT 
+    l.*,
+    COALESCE(l.latitude, p.latitude)  AS latitude_final,
+    COALESCE(l.longitude, p.longitude) AS longitude_final
+FROM lead_bruto l
+LEFT JOIN ponto_notavel p ON l.pn_con = p.pn_id;
+
+-- ================================
+-- MATERIALIZED VIEW: Energia por Município
+-- ================================
+CREATE MATERIALIZED VIEW resumo_energia_por_municipio AS
+SELECT
+    m.id   AS municipio_id,
+    m.nome,
+    m.uf,
+    SUM(e.energia_total)       AS energia_total,
+    COUNT(DISTINCT l.uc_id)    AS total_leads
+FROM lead_bruto l
+JOIN municipio m           ON l.municipio_id = m.id
+JOIN lead_energia_mensal e ON l.uc_id = e.uc_id
+GROUP BY m.id, m.nome, m.uf;
+
+-- Para atualizar:
+--REFRESH MATERIALIZED VIEW resumo_energia_por_municipio;
