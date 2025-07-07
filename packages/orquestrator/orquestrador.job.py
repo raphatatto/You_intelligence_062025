@@ -1,95 +1,104 @@
-# orquestrador.py
-#!/usr/bin/env python3
-import sys
-import asyncio
-import logging
-from pathlib import Path
+import os
+import json
+import zipfile
+import shutil
+import requests
 from tqdm import tqdm
+from pathlib import Path
+from subprocess import run
 
-# Logging via tqdm
-class TqdmLoggingHandler(logging.Handler):
-    def emit(self, record):
-        msg = self.format(record)
-        tqdm.write(msg)
+from packages.jobs.utils.rastreio import get_status
 
-logging.basicConfig(
-    format="%(asctime)s %(levelname)-8s %(message)s",
-    datefmt="%H:%M:%S",
-    level=logging.INFO
-)
-logger = logging.getLogger(__name__)
-logger.addHandler(TqdmLoggingHandler())
 
-# Permitir imports a partir da raiz do projeto
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
-
-from packages.jobs.utils.rastreio import registrar_status, get_status
-from packages.jobs.importers.importer_ucat_job import main as importar_ucat
-from packages.jobs.importers.importer_ucmt_job import main as importar_ucmt
-from packages.jobs.importers.importer_ucbt_job import main as importar_ucbt
-from packages.jobs.importers.importer_ponnot_job import main as importar_ponnot
-
-# Onde estão os GDBs extraídos
-gdb_root = Path("data/downloads")
-BASES = {
-    "UCAT_tab": importar_ucat,
-    "UCMT_tab": importar_ucmt,
-    "UCBT_tab": importar_ucbt,
-    "PONNOT":   importar_ponnot,
+DATASETS_JSON = Path("data/datasets.json")
+DOWNLOADS_DIR = Path("data/downloads/")
+CAMADAS = ["UCAT", "UCMT", "UCBT", "PONNOT"]
+IMPORTERS = {
+    "UCAT": "packages/jobs/importers/importer_ucat.job.py",
+    "UCMT": "packages/jobs/importers/importer_ucmt.job.py",
+    "UCBT": "packages/jobs/importers/importer_ucbt.job.py",
+    "PONNOT": "packages/jobs/importers/importer_ponnot.job.py",
 }
 
 
-def encontrar_gdb(prefixo: str, ano: int) -> Path | None:
-    candidatos = list(gdb_root.glob(f"{prefixo}_{ano}*.gdb"))
-    return candidatos[0] if candidatos else None
-
-
-async def importar_distribuidora(nome: str, prefixo: str, ano: int):
-    gdb = encontrar_gdb(prefixo, ano)
-    if not gdb:
-        logger.warning(f"GDB não encontrado: {prefixo} {ano}")
-        registrar_status(prefixo, ano, camada="ALL", status="gdb_not_found")
+def baixar_zip(url: str, destino: Path):
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    if destino.exists():
+        tqdm.write(f"📦 Já existe: {destino.name}")
         return
 
-    logger.info(f"Usando GDB: {gdb.name}")
-    for camada, importer in BASES.items():
-        prev = get_status(prefixo, ano, camada)
-        if prev == "success":
-            logger.info(f"[{camada}] já concluída, pulando.")
-            continue
+    tqdm.write(f"⬇️ Baixando: {url}")
+    with requests.get(url, stream=True, timeout=120) as r:
+        r.raise_for_status()
+        with open(destino, 'wb') as f:
+            for chunk in r.iter_content(chunk_size=8192):
+                f.write(chunk)
 
-        logger.info(f"🔄 Iniciando importação: {camada} | {nome} {ano}")
-        registrar_status(prefixo, ano, camada, "started")
+
+def extrair_zip(arquivo_zip: Path, destino: Path):
+    if destino.exists():
+        tqdm.write(f"📂 Já extraído: {destino}")
+        return
+
+    tqdm.write(f"🗜️ Extraindo: {arquivo_zip.name}")
+    with zipfile.ZipFile(arquivo_zip, 'r') as zip_ref:
+        zip_ref.extractall(destino)
+
+
+def rodar_importer(script_path: str, gdb_path: Path, camada: str, distribuidora: str, ano: int, prefixo: str):
+    status = get_status(prefixo, ano, camada)
+    if status == "success":
+        tqdm.write(f"✅ Já importado: {camada} {prefixo} {ano}")
+        return
+
+    tqdm.write(f"⚙️  Importando {camada} para {prefixo} {ano}")
+    run([
+        "python", script_path,
+        "--gdb", str(gdb_path),
+        "--ano", str(ano),
+        "--distribuidora", distribuidora,
+        "--prefixo", prefixo
+    ], check=False)
+
+
+def main():
+    tqdm.write("📁 Iniciando orquestrador de ingestão batch...")
+    with open(DATASETS_JSON, "r", encoding="utf-8") as f:
+        datasets = json.load(f)
+
+    for ds in tqdm(datasets, desc="Distribuidoras"):
+        prefixo = ds["id"]
+        ano = ds["ano"]
+        distribuidora = ds["distribuidora"]
+        url = ds["download"]
+
+        zip_path = DOWNLOADS_DIR / f"{prefixo}_{ano}.zip"
+        extract_dir = DOWNLOADS_DIR / f"{prefixo}_{ano}"
+        gdb_dir = next((d for d in extract_dir.glob("*.gdb")), None)
+
+        # Baixar e extrair
         try:
-            importer(
-                gdb_path=gdb,
-                distribuidora=nome,
-                ano=ano,
-                prefixo=prefixo,
-                camada=camada,
-                modo_debug=False
-            )
+            baixar_zip(url, zip_path)
+            extrair_zip(zip_path, extract_dir)
+            if not gdb_dir:
+                gdb_dir = next((d for d in extract_dir.glob("*.gdb")), None)
+            if not gdb_dir:
+                raise Exception("GDB não encontrado após extração.")
         except Exception as e:
-            logger.error(f"❌ Erro em {camada}: {e}", exc_info=True)
-            registrar_status(prefixo, ano, camada, f"failed: {e}")
+            tqdm.write(f"❌ Falha ao preparar GDB {prefixo}: {e}")
             continue
 
-        final = get_status(prefixo, ano, camada)
-        if final is None:
-            logger.error(f"[{camada}] sem status final registrado!")
-        else:
-            logger.info(f"✅ {camada} finalizado com status '{final}'")
+        # Importar camadas
+        for camada in CAMADAS:
+            script = IMPORTERS[camada]
+            try:
+                rodar_importer(script, gdb_dir, camada, distribuidora, ano, prefixo)
+            except Exception as e:
+                tqdm.write(f"❌ Erro ao rodar {camada} ({prefixo}): {e}")
+                continue
 
-
-async def rodar_orquestrador(selecionados: list[dict]):
-    for item in selecionados:
-        await importar_distribuidora(item["nome"], item["prefixo"], item["ano"])
+    tqdm.write("🏁 Orquestração finalizada.")
 
 
 if __name__ == "__main__":
-    DISTRIBUIDORAS = [
-        # {"nome": "CPFL PAULISTA",         "prefixo": "CPFL_Paulista_63",   "ano": 2023},
-        {"nome": "ENEL DISTRIBUIÇÃO RIO", "prefixo": "Enel_RJ_383",         "ano": 2023},
-        # ... outros
-    ]
-    asyncio.run(rodar_orquestrador(DISTRIBUIDORAS))
+    main()

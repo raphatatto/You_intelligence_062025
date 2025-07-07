@@ -1,72 +1,90 @@
-# packages/jobs/importers/importer_ponnot_job.py
-
-import geopandas as gpd
+import os
+import io
+import hashlib
+import argparse
 import pandas as pd
+import geopandas as gpd
 from pathlib import Path
 from tqdm import tqdm
-from psycopg2.extras import execute_batch
 from fiona import listlayers
 
-from packages.database.connection import get_db_cursor
-from packages.jobs.utils.rastreio import registrar_status
+from packages.database.connection import get_db_connection
+from packages.jobs.utils.rastreio import registrar_status, gerar_import_id
 
-# Detecta dinamicamente a layer com prefixo “PONNOT”
-def _detect_layer(gdb_path: Path) -> str:
+
+def detectar_layer(gdb_path: Path) -> str:
     layers = listlayers(str(gdb_path))
-    return next(l for l in layers if l.upper().startswith("PONNOT"))
+    return next((l for l in layers if l.upper().startswith("PONNOT")), None)
 
-BATCH_SIZE = 10_000
 
-def _chunkify(df: pd.DataFrame, size: int = BATCH_SIZE):
-    records = df.to_dict("records")
-    for i in range(0, len(records), size):
-        yield records[i : i + size]
+def insert_copy(cur, df: pd.DataFrame, table: str, columns: list[str]):
+    buf = io.StringIO()
+    df.to_csv(buf, index=False, header=False, columns=columns, na_rep='\\N')
+    buf.seek(0)
+    cur.copy_expert(f"COPY {table} ({','.join(columns)}) FROM STDIN WITH (FORMAT csv, NULL '\\N')", buf)
+    tqdm.write(f"✅ Inserido em {table}: {len(df)} registros.")
 
-def main(
+
+def importar_ponnot(
     gdb_path: Path,
-    distribuidora: str,  # não usado aqui, mas mantido na assinatura
+    distribuidora: str,
     ano: int,
     prefixo: str,
-    camada: str = "PONNOT",
-    modo_debug: bool = False,
+    modo_debug: bool = False
 ):
+    camada = "PONNOT"
     registrar_status(prefixo, ano, camada, "started")
-    try:
-        # 1) detecta layer
-        layer = _detect_layer(gdb_path)
-        tqdm.write(f"📖 Lendo camada '{layer}' do GDB em {gdb_path}...")
-        gdf = gpd.read_file(str(gdb_path), layer=layer)
-        total = len(gdf)
-        tqdm.write(f"   → {total} feições encontradas.")
+    import_id = gerar_import_id(prefixo, ano, camada)
 
-        if total == 0:
-            tqdm.write("   → Nenhuma feição; marcando no_new_rows.")
+    try:
+        layer = detectar_layer(gdb_path)
+        if not layer:
+            raise Exception("Camada PONNOT não encontrada no GDB.")
+
+        tqdm.write(f"📖 Lendo camada '{layer}'...")
+        gdf = gpd.read_file(str(gdb_path), layer=layer)
+
+        if len(gdf) == 0:
             registrar_status(prefixo, ano, camada, "no_new_rows")
             return
 
-        # 2) monta DataFrame com coordenadas
+        # Gera DataFrame com coordenadas e pn_id
+        tqdm.write("🧭 Extraindo coordenadas...")
         df = pd.DataFrame({
-            "pn_id":     gdf["COD_ID"],
-            "latitude":  gdf.geometry.y,
-            "longitude": gdf.geometry.x,
+            "pn_id": gdf["COD_ID"],
+            "latitude": gdf.geometry.y,
+            "longitude": gdf.geometry.x
         })
 
-        sql_insert = """
-            INSERT INTO ponto_notavel (pn_id, latitude, longitude)
-            VALUES (%(pn_id)s, %(latitude)s, %(longitude)s)
-            ON CONFLICT (pn_id) DO NOTHING
-        """
-
-        # 3) insere em batches
-        with get_db_cursor(commit=True) as cur:
-            for batch in tqdm(_chunkify(df), desc="PONNOT_batches", unit="batch"):
-                execute_batch(cur, sql_insert, batch)
-            tqdm.write("✅ ponto_notavel inserido")
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            insert_copy(cur, df, "ponto_notavel", ["pn_id", "latitude", "longitude"])
+        conn.commit()
 
         registrar_status(prefixo, ano, camada, "success")
+        tqdm.write("🎉 Importação PONNOT finalizada com sucesso!")
 
     except Exception as e:
-        tqdm.write(f"❌ Erro na importação PONNOT: {e}")
+        tqdm.write(f"❌ Erro ao importar PONNOT: {e}")
         registrar_status(prefixo, ano, camada, f"failed: {e}")
         if modo_debug:
             raise
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--gdb", required=True, type=Path)
+    parser.add_argument("--ano", required=True, type=int)
+    parser.add_argument("--distribuidora", required=True)
+    parser.add_argument("--prefixo", required=True)
+    parser.add_argument("--modo_debug", action="store_true")
+
+    args = parser.parse_args()
+
+    importar_ponnot(
+        gdb_path=args.gdb,
+        distribuidora=args.distribuidora,
+        ano=args.ano,
+        prefixo=args.prefixo,
+        modo_debug=args.modo_debug
+    )
