@@ -68,8 +68,8 @@ export default function LeadsTable({ rows }: Props) {
               <td className="px-4 py-2">{l.estado ?? '—'}</td>
               <td className="px-4 py-2">{DISTRIBUIDORAS_MAP[l.distribuidora] ?? l.distribuidora ?? '—'}</td>
               <td className="px-4 py-2">{l.segmento ?? '—'}</td>
-              <td className="px-4 py-2 max-w-[200px] truncate" title={l.descricao}>{l.descricao ?? '—'}</td>
-            </tr>
+              <td className="px-4 py-2" title={l.descricao}>{l.descricao ?? '—'}</td>
+              </tr>
           ))}
         </tbody>
       </table>

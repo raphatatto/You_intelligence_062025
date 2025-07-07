@@ -1,15 +1,25 @@
 'use client';
 
 import CardKPI from '@/components/ui/CardKPI';
-import { Bolt, Users } from 'lucide-react';
+import { Bolt, Users, Zap } from 'lucide-react';
 import { useLeads } from '@/services/leads';
 import { countByEstado, calcularEnergiaMapeada } from '@/utils/analytics';
-import BarLeadsEstado from '@/components/charts/BarLeadsEstados';
+import BarLeadsDistribuidora from '@/components/charts/BarLeadsDistribuidora';
+import { countByDistribuidora } from '@/utils/analytics';
+import BarTopCNAE from '@/components/charts/BarTopCNAE';
+import { top10CNAE } from '@/utils/analytics';
+import { filtrarLeadsComPotencial } from '@/utils/analytics';
+
 
 export default function Dashboard() {
   const { leads = [], isLoading, error } = useLeads(); // ✅ certo
   const dataEstado = countByEstado(leads);
-  const energiaTotal = calcularEnergiaMapeada(leads);
+  const energiaTotal = calcularEnergiaMapeada(leads).toFixed(1); ;
+  const dataCNAE = top10CNAE(leads);
+  const totalLeads = leads.length;
+  const leadsPotenciais = filtrarLeadsComPotencial(leads, 100);
+  const totalPotenciais = leadsPotenciais.length;
+
 
   return (
 <section className="space-y-8 px-6 lg:px-12 py-10 bg-black text-white">
@@ -22,28 +32,16 @@ export default function Dashboard() {
   </div>
 
   {/* KPIs */}
-  <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-6 mt-6">
+  <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-6 mt-6"> 
     <CardKPI
-      title="Energia mapeada (MWh)"
-      value="17,6"
-      icon={<Bolt className="text-yellow-400" />}
-      className="bg-[#1a1a1a] border border-white/10"
-    />
-    <CardKPI
-      title="Leads qualificados"
-      value="4"
-      icon={<Users className="text-green-400" />}
-      className="bg-[#1a1a1a] border border-white/10"
-    />
-    <CardKPI
-      title="% com CNPJ"
-      value="100%"
-      icon={<Users className="text-blue-400" />}
+      title="Total de Leads"
+      value={totalLeads.toLocaleString('pt-BR')}
+      icon={<Users className="text-cyan-400" />}
       className="bg-[#1a1a1a] border border-white/10"
     />
     <CardKPI
       title="Última atualização"
-      value="25/06/2025"
+      value="04/07/2025"
       icon={<Bolt className="text-pink-400" />}
       className="bg-[#1a1a1a] border border-white/10"
     />
@@ -51,8 +49,12 @@ export default function Dashboard() {
 
   {/* Gráfico */}
   <div className="bg-[#121212] rounded-xl p-6 shadow-lg border border-white/10">
-    <h2 className="text-lg font-semibold mb-3">Leads por Estado</h2>
-    <BarLeadsEstado data={dataEstado} />
+  <h2 className="text-lg font-semibold mb-3">Leads por Distribuidora</h2>
+  <BarLeadsDistribuidora data={countByDistribuidora(leads)} />
+  </div>
+  <div className="bg-[#121212] rounded-xl p-6 shadow-lg border border-white/10">
+  <h2 className="text-lg font-semibold mb-3">Top 10 CNAEs mais frequentes</h2>
+  <BarTopCNAE data={dataCNAE} />
   </div>
 </section>
 

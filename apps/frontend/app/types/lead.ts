@@ -10,6 +10,7 @@ export type Lead = {
   codigoDistribuidora: string 
   segmento: string
   descricao?: string
+  potencia?: number; 
   lat: number
   lng: number
 }

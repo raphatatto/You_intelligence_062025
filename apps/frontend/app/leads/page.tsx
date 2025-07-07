@@ -30,6 +30,7 @@ export default function LeadsPage() {
   const { order, setOrder } = useSort()
   const { leads, isLoading, error } = useLeads()
 
+
   const estados = useMemo<string[]>(() => {
     return Array.from(new Set(leads.map((l) => l.estado).filter(Boolean))).sort()
   }, [leads])
@@ -43,15 +44,25 @@ export default function LeadsPage() {
 
     if (busca) {
       const term = stripDiacritics(busca.toLowerCase())
+
       arr = arr.filter((l) => {
-        const nome = stripDiacritics(l.segmento?.toLowerCase() ?? '')
-        const uf = stripDiacritics(l.estado?.toLowerCase() ?? '')
+        const estado = stripDiacritics(l.estado?.toLowerCase() ?? '')
         const cnae = stripDiacritics(l.cnae?.toLowerCase() ?? '')
-        const dist = stripDiacritics(DISTRIBUIDORAS_MAP[l.distribuidora]?.toLowerCase() ?? '')
-        const seg = stripDiacritics(CNAE_SEGMENTOS[l.cnae]?.toLowerCase() ?? '')
-        return nome.includes(term) || uf.includes(term) || cnae.includes(term) || dist.includes(term) || seg.includes(term)
+        const distribuidora = stripDiacritics(DISTRIBUIDORAS_MAP[l.distribuidora]?.toLowerCase() ?? '')
+        const segmentoNome = stripDiacritics(CNAE_SEGMENTOS[l.cnae]?.toLowerCase() ?? '')
+        const segmentoLead = stripDiacritics(l.segmento?.toLowerCase() ?? '')
+
+        return (
+          estado.includes(term) ||
+          cnae.includes(term) ||
+          distribuidora.includes(term) ||
+          segmentoNome.includes(term) ||
+          segmentoLead.includes(term)
+        )
       })
     }
+
+
 
     switch (order) {
       case 'dic-asc':
