@@ -1,31 +1,43 @@
-# packages/jobs/utils/rastreio.py
+import hashlib
 from packages.database.connection import get_db_cursor
 
-def registrar_status(distribuidora: str, ano: int, camada: str, status: str) -> None:
-    sql = """
-    INSERT INTO import_status(distribuidora, ano, camada, status, data_execucao)
-      VALUES (%s, %s, %s, %s, NOW())
-    ON CONFLICT(distribuidora, ano, camada)
-      DO UPDATE SET status = EXCLUDED.status,
-                    data_execucao = EXCLUDED.data_execucao
+def gerar_import_id(prefixo: str, ano: int, camada: str) -> str:
     """
+    Gera um ID único baseado nos dados da importação.
+    """
+    raw = f"{prefixo}_{ano}_{camada}".encode()
+    return hashlib.md5(raw).hexdigest()
+
+def registrar_status(
+    prefixo: str,
+    ano: int,
+    camada: str,
+    status: str,
+    erro: str = None,
+    distribuidora_id: int = None
+):
+    """
+    Registra ou atualiza o status da importação no schema intel_lead.
+    """
+    import_id = gerar_import_id(prefixo, ano, camada)
+
     with get_db_cursor(commit=True) as cur:
-        cur.execute(sql, (distribuidora, ano, camada, status))
+        cur.execute("""
+            INSERT INTO import_status (import_id, status, camada, ano, erro, distribuidora_id)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            ON CONFLICT (import_id) DO UPDATE SET
+                status = EXCLUDED.status,
+                erro = EXCLUDED.erro,
+                distribuidora_id = COALESCE(EXCLUDED.distribuidora_id, import_status.distribuidora_id);
+        """, (import_id, status, camada, ano, erro, distribuidora_id))
 
-def get_status(distribuidora: str, ano: int, camada: str) -> str | None:
-    sql = """
-    SELECT status
-      FROM import_status
-     WHERE distribuidora = %s AND ano = %s AND camada = %s
+def get_status(prefixo: str, ano: int, camada: str) -> str:
     """
-    with get_db_cursor(commit=False) as cur:
-        cur.execute(sql, (distribuidora, ano, camada))
-        row = cur.fetchone()
-        if not row:
-            return None
+    Retorna o status atual da importação, baseado no prefixo.
+    """
+    import_id = gerar_import_id(prefixo, ano, camada)
 
-        # se veio como tupla ou lista
-        if isinstance(row, (list, tuple)):
-            return row[0]
-        # se veio como dict ou RealDictRow
-        return row.get("status")
+    with get_db_cursor() as cur:
+        cur.execute("SELECT status FROM import_status WHERE import_id = %s", (import_id,))
+        row = cur.fetchone()
+        return row["status"] if row else None

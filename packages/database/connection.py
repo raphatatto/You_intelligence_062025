@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Schema padrão (ex: "lead", "public", etc.)
-DB_SCHEMA = os.getenv("DB_SCHEMA", "lead")
+DB_SCHEMA = os.getenv("DB_SCHEMA", "intel_lead")
 
 # Configurações de conexão via variáveis de ambiente
 DB_CONFIG = {

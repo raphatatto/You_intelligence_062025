@@ -1,0 +1,26 @@
+[
+      {
+    "distribuidora": "ENEL_RJ",
+    "ano": 2023,
+    "id": "4fd3c2e1dae145e5b9974ef81d9f9641",
+    "download": "https://www.arcgis.com/sharing/rest/content/items/4fd3c2e1dae145e5b9974ef81d9f9641/data",
+    "created": "Tue, 10 Jun 2025 19:21:13 GMT",
+    "modified": "Tue, 10 Jun 2025 19:21:16 GMT"
+  },
+    {
+    "distribuidora": "CPFL_PAULISTA",
+    "ano": 2023,
+    "id": "79071ab68be94f6f91b5c2eead4e2384",
+    "download": "https://www.arcgis.com/sharing/rest/content/items/79071ab68be94f6f91b5c2eead4e2384/data",
+    "created": "Tue, 10 Jun 2025 19:02:19 GMT",
+    "modified": "Tue, 10 Jun 2025 19:02:21 GMT"
+  },
+{
+    "distribuidora": "ENEL_SP",
+    "ano": 2023,
+    "id": "115771069b4944bcbbfe0cc0f656a5a7",
+    "download": "https://www.arcgis.com/sharing/rest/content/items/115771069b4944bcbbfe0cc0f656a5a7/data",
+    "created": "Tue, 10 Jun 2025 19:24:01 GMT",
+    "modified": "Tue, 10 Jun 2025 19:24:03 GMT"
+  }
+]

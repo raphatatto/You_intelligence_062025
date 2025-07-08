@@ -30,65 +30,82 @@ O schema `intel_lead` foi projetado para suportar análise geoespacial e tempora
 
 ## 2. Dicionário de Dados Detalhado
 
-| Tabela                    | Coluna                                              | Tipo             | Descrição                                 | Restrição                       |
-| ------------------------- | --------------------------------------------------- | ---------------- | ----------------------------------------- | ------------------------------- |
-| **import\_status**        | import\_id                                          | TEXT             | Identificador único da importação         | PK                              |
-|                           | distribuidora\_id                                   | INT              | Código da distribuidora                   | FK → distribuidora(id)          |
-|                           | ano                                                 | INT              | Ano da importação                         | NOT NULL                        |
-|                           | camada                                              | camada\_enum     | Camada de origem dos dados                | NOT NULL                        |
-|                           | status                                              | status\_enum     | Status do processo de importação          | NOT NULL                        |
-|                           | linhas\_processadas                                 | INT              | Número de linhas processadas              |                                 |
-|                           | data\_inicio                                        | TIMESTAMP        | Data/hora do início                       | DEFAULT CURRENT\_TIMESTAMP      |
-|                           | data\_fim                                           | TIMESTAMP        | Data/hora do término                      |                                 |
-|                           | observacoes                                         | TEXT             | Observações do processo                   |                                 |
-| **lead\_bruto**           | uc\_id                                              | TEXT             | Identificador da unidade consumidora      | PK                              |
-|                           | import\_id                                          | TEXT             | Referência à importação                   | FK → import\_status(import\_id) |
-|                           | cod\_id                                             | TEXT             | Código interno da UC (origem ANEEL/CCEE)  | NOT NULL                        |
-|                           | distribuidora\_id                                   | INT              | Distribuidora responsável                 | FK → distribuidora(id)          |
-|                           | origem                                              | origem\_enum     | Origem da UC (UCAT, UCMT, UCBT)           | NOT NULL                        |
-|                           | ano                                                 | INT              | Ano de referência                         | NOT NULL                        |
-|                           | status                                              | TEXT             | Status interno (`raw`, `processed`, etc.) | DEFAULT 'raw'                   |
-|                           | data\_conexao                                       | DATE             | Data de conexão da UC                     |                                 |
-|                           | cnae                                                | INT              | Código CNAE da atividade                  |                                 |
-|                           | grupo\_tensao                                       | TEXT             | Grupo de tensão                           | FK → grupo\_tensao(id)          |
-|                           | modalidade                                          | TEXT             | Modalidade tarifária                      | FK → modalidade\_tarifaria(id)  |
-|                           | tipo\_sistema                                       | TEXT             | Tipo de sistema                           | FK → tipo\_sistema(id)          |
-|                           | situacao                                            | TEXT             | Situação da UC                            | FK → situacao\_uc(id)           |
-|                           | classe                                              | TEXT             | Classe de consumo                         | FK → classe\_consumo(id)        |
-|                           | segmento                                            | TEXT             | Segmento de mercado                       | FK → segmento\_mercado(id)      |
-|                           | subestacao                                          | TEXT             | Identificador da subestação               |                                 |
-|                           | municipio\_id                                       | INT              | Código IBGE do município                  | FK → municipio(id)              |
-|                           | bairro                                              | TEXT             | Bairro                                    |                                 |
-|                           | cep                                                 | TEXT             | CEP da UC                                 |                                 |
-|                           | pac                                                 | INT              | PAC (potência ativa contratada)           |                                 |
-|                           | pn\_con                                             | TEXT             | Ponto notável de conexão                  |                                 |
-|                           | descricao                                           | TEXT             | Observações gerais                        |                                 |
-|                           | latitude                                            | DOUBLE PRECISION | Latitude geográfica                       |                                 |
-|                           | longitude                                           | DOUBLE PRECISION | Longitude geográfica                      |                                 |
-|                           | created\_at                                         | TIMESTAMP        | Timestamp de criação                      | DEFAULT CURRENT\_TIMESTAMP      |
-|                           | updated\_at                                         | TIMESTAMP        | Timestamp de última atualização           | DEFAULT CURRENT\_TIMESTAMP      |
-| **lead\_energia\_mensal** | uc\_id                                              | TEXT             | FK para `lead_bruto(uc_id)`               | PK, FK ON DELETE CASCADE        |
-|                           | mes                                                 | INT              | Mês (1–12)                                | CHECK 1–12, PK                  |
-|                           | energia\_ponta                                      | DOUBLE PRECISION | Energia no horário de ponta (MWh)         |                                 |
-|                           | energia\_fora\_ponta                                | DOUBLE PRECISION | Energia fora de ponta (MWh)               |                                 |
-|                           | energia\_total                                      | DOUBLE PRECISION | Energia total (MWh)                       |                                 |
-|                           | origem                                              | origem\_enum     | Origem dos dados                          | NOT NULL                        |
-| **lead\_demanda\_mensal** | ... e assim por diante para demanda e qualidade ... |                  |                                           |                                 |
+### Tabela `lead_bruto`
 
-> **Observação**: complete o dicionário para `lead_demanda_mensal`, `lead_qualidade_mensal`, `lead_enrichment_log` e `ponto_notavel` seguindo o mesmo padrão.
+| Coluna            | Tipo             | Descrição                                 | Restrição                       |
+| ----------------- | ---------------- | ----------------------------------------- | ------------------------------- |
+| id                | UUID             | Identificador único da linha              | PK, DEFAULT gen\_random\_uuid() |
+| uc\_id            | TEXT             | Identificador lógico da UC                | INDEX (não-único)               |
+| import\_id        | TEXT             | Referência à importação                   | FK → import\_status(import\_id) |
+| cod\_id           | TEXT             | Código interno da UC                      | NOT NULL                        |
+| distribuidora\_id | INT              | Distribuidora responsável                 | FK → distribuidora(id)          |
+| origem            | origem\_enum     | Origem da UC (UCAT, UCMT, UCBT)           | NOT NULL                        |
+| ano               | INT              | Ano de referência                         | NOT NULL                        |
+| status            | TEXT             | Status interno (`raw`, `processed`, etc.) | DEFAULT 'raw'                   |
+| data\_conexao     | DATE             | Data de conexão da UC                     |                                 |
+| cnae              | INT              | Código CNAE                               |                                 |
+| grupo\_tensao     | TEXT             | Grupo de tensão                           | FK → grupo\_tensao(id)          |
+| modalidade        | TEXT             | Modalidade tarifária                      | FK → modalidade\_tarifaria(id)  |
+| tipo\_sistema     | TEXT             | Tipo de sistema                           | FK → tipo\_sistema(id)          |
+| situacao          | TEXT             | Situação da UC                            | FK → situacao\_uc(id)           |
+| classe            | TEXT             | Classe de consumo                         | FK → classe\_consumo(id)        |
+| segmento          | TEXT             | Segmento de mercado                       | FK → segmento\_mercado(id)      |
+| subestacao        | TEXT             | Subestação da UC                          |                                 |
+| municipio\_id     | INT              | Código do município                       | FK → municipio(id)              |
+| bairro            | TEXT             | Bairro                                    |                                 |
+| cep               | TEXT             | CEP da unidade                            |                                 |
+| pac               | INT              | Potência ativa contratada                 |                                 |
+| pn\_con           | TEXT             | Ponto notável                             |                                 |
+| descricao         | TEXT             | Observações gerais                        |                                 |
+| latitude          | DOUBLE PRECISION | Latitude                                  |                                 |
+| longitude         | DOUBLE PRECISION | Longitude                                 |                                 |
+| created\_at       | TIMESTAMP        | Timestamp de criação                      | DEFAULT CURRENT\_TIMESTAMP      |
+| updated\_at       | TIMESTAMP        | Timestamp de atualização                  | DEFAULT CURRENT\_TIMESTAMP      |
+
+### Tabelas `lead_energia_mensal`, `lead_demanda_mensal`, `lead_qualidade_mensal`
+
+As três compartilham estrutura similar. Destaque para:
+
+| Coluna               | Tipo             | Descrição                         | Restrição                       |
+| -------------------- | ---------------- | --------------------------------- | ------------------------------- |
+| id                   | UUID             | Identificador único               | PK                              |
+| lead\_bruto\_id      | UUID             | Referência à linha de lead\_bruto | FK → lead\_bruto(id)            |
+| mes                  | INT              | Mês (1–12)                        | CHECK                           |
+| origem               | origem\_enum     | Origem da informação              | NOT NULL                        |
+| energia\_ponta       | DOUBLE PRECISION | Energia em horário de ponta (MWh) | (energia\_mensal apenas)        |
+| energia\_fora\_ponta | DOUBLE PRECISION | Energia fora de ponta (MWh)       |                                 |
+| demanda\_total       | DOUBLE PRECISION | Demanda total (kW)                | (demanda\_mensal apenas)        |
+| dic, fic, sremede    | DOUBLE PRECISION | Indicadores de qualidade          | (qualidade\_mensal apenas)      |
+| import\_id           | TEXT             | Referência à importação           | FK → import\_status(import\_id) |
+
+### Tabela `lead_enrichment_log`
+
+| Coluna          | Tipo            | Descrição                            | Restrição                  |
+| --------------- | --------------- | ------------------------------------ | -------------------------- |
+| id              | UUID            | Identificador único                  | PK                         |
+| lead\_bruto\_id | UUID            | FK para lead\_bruto                  | FK → lead\_bruto(id)       |
+| etapa           | TEXT            | Etapa do enriquecimento              |                            |
+| resultado       | resultado\_enum | Resultado (success, failed, partial) |                            |
+| detalhes        | TEXT            | Logs ou JSON da execução             |                            |
+| executado\_em   | TIMESTAMP       | Data/hora do enriquecimento          | DEFAULT CURRENT\_TIMESTAMP |
+
+### Tabela `ponto_notavel`
+
+| Coluna    | Tipo             | Descrição              | Restrição |
+| --------- | ---------------- | ---------------------- | --------- |
+| pn\_id    | TEXT             | Identificador do ponto | PK        |
+| latitude  | DOUBLE PRECISION | Latitude geográfica    |           |
+| longitude | DOUBLE PRECISION | Longitude geográfica   |           |
 
 ---
 
 ## 3. Diagrama ER
 
-Utilize sua ferramenta favorita (pgModeler, DBeaver, Draw\.io) para gerar um diagrama ER com:
+Você pode usar DBeaver, pgModeler ou outro para gerar o ERD. O diagrama deve:
 
-* Entidades e atributos principais.
-* PKs sublinhadas.
-* FKs indicadas como setas.
-* Cardinalidades (1\:N) nos relacionamentos.
-
-Você pode importar o SQL ou conectar diretamente ao Postgres e exportar o diagrama.
+* Destacar `lead_bruto.id` como PK real
+* Mostrar FKs `lead_bruto_id` nas tabelas filhas
+* Exibir joins com `distribuidora`, `municipio`, `grupo_tensao`, etc.
 
 ---
 
@@ -96,14 +113,14 @@ Você pode importar o SQL ou conectar diretamente ao Postgres e exportar o diagr
 
 ```sql
 -- 1) Leads sem coordenadas definidas:
-SELECT uc_id, cod_id
+SELECT id, cod_id
 FROM lead_bruto
 WHERE latitude IS NULL AND longitude IS NULL;
 
 -- 2) Energia total por distribuidora/ano:
 SELECT l.distribuidora_id, l.ano, SUM(e.energia_total) AS energia
 FROM lead_bruto l
-JOIN lead_energia_mensal e ON l.uc_id = e.uc_id
+JOIN lead_energia_mensal e ON l.id = e.lead_bruto_id
 GROUP BY l.distribuidora_id, l.ano;
 
 -- 3) Imports que falharam:
@@ -128,13 +145,14 @@ REFRESH MATERIALIZED VIEW resumo_energia_por_municipio;
 
 ## 6. Política de Retenção e Particionamento
 
-* Particione tabelas mensais (`lead_energia_mensal`, etc.) por coluna `ano` para agilizar consultas.
+* Particione tabelas mensais (`lead_energia_mensal`, etc.) por `ano` ou `created_at`.
 * Exemplo com declarative partitioning (Postgres 12+):
 
-  ```sql
-  CREATE TABLE lead_energia_mensal_2025 PARTITION OF lead_energia_mensal FOR VALUES IN (2025);
-  ```
-* Defina jobs para remover dados anteriores a N anos, se aplicável.
+```sql
+CREATE TABLE lead_energia_mensal_2025 PARTITION OF lead_energia_mensal FOR VALUES IN (2025);
+```
+
+* Defina políticas de retenção conforme LGPD e necessidade do projeto.
 
 ---
 
@@ -152,4 +170,4 @@ REFRESH MATERIALIZED VIEW resumo_energia_por_municipio;
 
 ---
 
-*Documentação gerada em: `$(date +'%Y-%m-%d')`*
+*Documentação atualizada em: 2025-07-08*

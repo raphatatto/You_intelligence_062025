@@ -33,7 +33,7 @@ def importar_ponnot(
     modo_debug: bool = False
 ):
     camada = "PONNOT"
-    registrar_status(prefixo, ano, camada, "started")
+    registrar_status(prefixo, ano, camada, "running")
     import_id = gerar_import_id(prefixo, ano, camada)
 
     try:
@@ -66,7 +66,7 @@ def importar_ponnot(
 
     except Exception as e:
         tqdm.write(f"❌ Erro ao importar PONNOT: {e}")
-        registrar_status(prefixo, ano, camada, f"failed: {e}")
+        registrar_status(prefixo, ano, camada, "failed", erro=str(e))
         if modo_debug:
             raise
 

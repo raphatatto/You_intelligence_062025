@@ -10,7 +10,17 @@ from fiona import listlayers
 
 from packages.database.connection import get_db_connection
 from packages.jobs.utils.rastreio import registrar_status, gerar_import_id
-from packages.jobs.utils.sanitize import sanitize_numeric
+from packages.jobs.utils.sanitize import (
+    sanitize_numeric,
+    sanitize_cnae,
+    sanitize_int,
+    sanitize_str,
+    sanitize_grupo_tensao,
+    sanitize_modalidade,
+    sanitize_tipo_sistema,
+    sanitize_situacao,
+    sanitize_classe,
+)
 
 
 REQUIRED_COLUMNS = [
@@ -18,16 +28,13 @@ REQUIRED_COLUMNS = [
     "SIT_ATIV", "CLAS_SUB", "CONJ", "MUN", "BRR", "CEP", "PN_CON", "DESCR"
 ]
 
-
 def detectar_layer(gdb_path: Path) -> str:
     layers = listlayers(str(gdb_path))
     return next((l for l in layers if l.upper().startswith("UCBT")), None)
 
-
-def gerar_uc_id(import_id: str, cod_id: str, cod_distribuidora: int) -> str:
-    base = f"{import_id}_{cod_distribuidora}_{cod_id}"
+def gerar_uc_id(cod_id: str, ano: int, camada: str, distribuidora_id: int) -> str:
+    base = f"{cod_id}_{ano}_{camada}_{distribuidora_id}"
     return hashlib.sha256(base.encode()).hexdigest()
-
 
 def insert_copy(cur, df: pd.DataFrame, table: str, columns: list[str]):
     buf = io.StringIO()
@@ -36,16 +43,9 @@ def insert_copy(cur, df: pd.DataFrame, table: str, columns: list[str]):
     cur.copy_expert(f"COPY {table} ({','.join(columns)}) FROM STDIN WITH (FORMAT csv, NULL '\\N')", buf)
     tqdm.write(f"✅ Inserido em {table}: {len(df)} registros.")
 
-
-def importar_ucbt(
-    gdb_path: Path,
-    distribuidora: str,
-    ano: int,
-    prefixo: str,
-    modo_debug: bool = False
-):
+def importar_ucbt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, modo_debug: bool = False):
     camada = "UCBT"
-    registrar_status(prefixo, ano, camada, "started")
+    registrar_status(prefixo, ano, camada, "running")
     import_id = gerar_import_id(prefixo, ano, camada)
 
     try:
@@ -60,40 +60,49 @@ def importar_ucbt(
             registrar_status(prefixo, ano, camada, "no_new_rows")
             return
 
-        # Remoção de colunas sujas
         sujas = gdf.columns[gdf.astype(str).apply(lambda col: col.str.contains("106022|YEL", na=False)).any()]
         gdf.drop(columns=sujas, inplace=True)
 
-        # Validação de campos obrigatórios
-        faltantes = [col for col in REQUIRED_COLUMNS if col not in gdf.columns]
-        if faltantes:
-            raise ValueError(f"Colunas obrigatórias ausentes: {faltantes}")
+        for col in REQUIRED_COLUMNS:
+            if col not in gdf.columns:
+                gdf[col] = None
 
-        tqdm.write("🧱 Transformando UCBT para lead_bruto...")
+                tqdm.write("🧱 Transformando UCBT para lead_bruto...")
+
+        # Verifica distribuidora_id único
+        dist_id = sanitize_int(gdf["DIST"]).dropna().unique()
+        if len(dist_id) != 1:
+            raise ValueError(f"Esperado um único código de distribuidora, mas encontrei: {dist_id}")
+        dist_id = int(dist_id[0])
+
         df_bruto = pd.DataFrame({
-            "uc_id": [gerar_uc_id(import_id, row["COD_ID"], int(row["DIST"])) for _, row in gdf.iterrows()],
+            "uc_id": [
+                gerar_uc_id(row["COD_ID"], ano, camada, dist_id)
+                for _, row in gdf.iterrows()
+            ],
             "import_id": import_id,
             "cod_id": gdf["COD_ID"],
-            "distribuidora_id": gdf["DIST"].astype("Int64"),
-            "origem": "UCBT",
+            "distribuidora_id": dist_id,
+            "origem": camada,
             "ano": ano,
             "status": "raw",
             "data_conexao": pd.to_datetime(gdf["DAT_CON"], errors="coerce"),
-            "cnae": gdf["CNAE"].astype("Int64"),
-            "grupo_tensao": gdf["GRU_TEN"],
-            "modalidade": gdf["GRU_TAR"],
-            "tipo_sistema": gdf["TIP_SIST"],
-            "situacao": gdf["SIT_ATIV"],
-            "classe": gdf["CLAS_SUB"],
-            "segmento": gdf["CONJ"],
+            "cnae": sanitize_cnae(gdf["CNAE"]),
+            "grupo_tensao": gdf["GRU_TEN"].apply(sanitize_grupo_tensao),
+            "modalidade": gdf["GRU_TAR"].apply(sanitize_modalidade),
+            "tipo_sistema": gdf["TIP_SIST"].apply(sanitize_tipo_sistema),
+            "situacao": gdf["SIT_ATIV"].apply(sanitize_situacao),
+            "classe": gdf["CLAS_SUB"].apply(sanitize_classe),
+            "segmento": None,
             "subestacao": None,
-            "municipio_id": gdf["MUN"].astype("Int64"),
-            "bairro": gdf["BRR"],
-            "cep": gdf["CEP"].astype("Int64"),
-            "pac": gdf["PAC"].astype("Int64"),
-            "pn_con": gdf["PN_CON"],
-            "descricao": gdf["DESCR"].fillna(""),
+            "municipio_id": sanitize_int(gdf["MUN"]),
+            "bairro": sanitize_str(gdf["BRR"]),
+            "cep": sanitize_int(gdf["CEP"]),
+            "pac": sanitize_int(gdf["PAC"]),
+            "pn_con": sanitize_str(gdf["PN_CON"]),
+            "descricao": sanitize_str(gdf["DESCR"]),
         })
+
 
         tqdm.write("📈 Transformando UCBT para lead_energia_mensal...")
         energia_df = []
@@ -101,8 +110,8 @@ def importar_ucbt(
             energia_df.append(pd.DataFrame({
                 "uc_id": df_bruto["uc_id"],
                 "mes": mes,
-                "energia_total": sanitize_numeric(gdf[f"ENE_{mes:02d}"]),
-                "origem": "UCBT"
+                "energia_total": sanitize_numeric(gdf.get(f"ENE_{mes:02d}")),
+                "origem": camada
             }))
         df_energia = pd.concat(energia_df).reset_index(drop=True)
 
@@ -112,9 +121,9 @@ def importar_ucbt(
             demanda_df.append(pd.DataFrame({
                 "uc_id": df_bruto["uc_id"],
                 "mes": mes,
-                "dem_ponta": sanitize_numeric(gdf[f"DEM_{mes:02d}"]),
-                "dem_fora_ponta": sanitize_numeric(gdf[f"DEM_{mes:02d}"]),
-                "origem": "UCBT"
+                "dem_ponta": sanitize_numeric(gdf.get(f"DEM_{mes:02d}")),
+                "dem_fora_ponta": sanitize_numeric(gdf.get(f"DEM_{mes:02d}")),
+                "origem": camada
             }))
         df_demanda = pd.concat(demanda_df).reset_index(drop=True)
 
@@ -126,29 +135,27 @@ def importar_ucbt(
                 "mes": mes,
                 "dic": sanitize_numeric(gdf.get(f"DIC_{mes:02d}")),
                 "fic": sanitize_numeric(gdf.get(f"FIC_{mes:02d}")),
-                "origem": "UCBT"
+                "origem": camada
             }))
         df_qualidade = pd.concat(qualidade_df).reset_index(drop=True)
 
-        # Inserção no banco
-        conn = get_db_connection()
-        with conn.cursor() as cur:
-            tqdm.write("🚀 Inserindo no banco...")
-            insert_copy(cur, df_bruto, "lead_bruto", df_bruto.columns.tolist())
-            insert_copy(cur, df_energia, "lead_energia_mensal", df_energia.columns.tolist())
-            insert_copy(cur, df_demanda, "lead_demanda_mensal", df_demanda.columns.tolist())
-            insert_copy(cur, df_qualidade, "lead_qualidade_mensal", df_qualidade.columns.tolist())
-        conn.commit()
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                tqdm.write("🚀 Inserindo no banco...")
+                insert_copy(cur, df_bruto, "lead_bruto", df_bruto.columns.tolist())
+                insert_copy(cur, df_energia, "lead_energia_mensal", df_energia.columns.tolist())
+                insert_copy(cur, df_demanda, "lead_demanda_mensal", df_demanda.columns.tolist())
+                insert_copy(cur, df_qualidade, "lead_qualidade_mensal", df_qualidade.columns.tolist())
+            conn.commit()
 
-        registrar_status(prefixo, ano, camada, "success")
+        registrar_status(prefixo, ano, camada, "completed")
         tqdm.write("🎉 Importação UCBT finalizada com sucesso!")
 
     except Exception as e:
         tqdm.write(f"❌ Erro ao importar UCBT: {e}")
-        registrar_status(prefixo, ano, camada, f"failed: {e}")
+        registrar_status(prefixo, ano, camada, "failed", erro=str(e))
         if modo_debug:
             raise
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

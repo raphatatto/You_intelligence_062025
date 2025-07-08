@@ -1,94 +1,71 @@
 import os
-import json
-import zipfile
-import shutil
-import requests
-from tqdm import tqdm
+import sys
 from pathlib import Path
-from subprocess import run
+from tqdm import tqdm
 
+# Corrige o path base do projeto
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from subprocess import run
 from packages.jobs.utils.rastreio import get_status
 
+# Caminho para a pasta onde estão os .gdb
+DOWNLOADS_DIR = Path("data/downloads")
 
-DATASETS_JSON = Path("data/datasets.json")
-DOWNLOADS_DIR = Path("data/downloads/")
+# Detecta todos os arquivos .gdb automaticamente
+PREFIXOS = [
+    gdb.stem for gdb in DOWNLOADS_DIR.glob("*.gdb")
+]
+
+# Camadas a importar
 CAMADAS = ["UCAT", "UCMT", "UCBT", "PONNOT"]
 IMPORTERS = {
-    "UCAT": "packages/jobs/importers/importer_ucat.job.py",
-    "UCMT": "packages/jobs/importers/importer_ucmt.job.py",
-    "UCBT": "packages/jobs/importers/importer_ucbt.job.py",
-    "PONNOT": "packages/jobs/importers/importer_ponnot.job.py",
+    "UCAT": "packages/jobs/importers/importer_ucat_job.py",
+    "UCMT": "packages/jobs/importers/importer_ucmt_job.py",
+    "UCBT": "packages/jobs/importers/importer_ucbt_job.py",
+    "PONNOT": "packages/jobs/importers/importer_ponnot_job.py",
 }
 
-
-def baixar_zip(url: str, destino: Path):
-    destino.parent.mkdir(parents=True, exist_ok=True)
-    if destino.exists():
-        tqdm.write(f"📦 Já existe: {destino.name}")
-        return
-
-    tqdm.write(f"⬇️ Baixando: {url}")
-    with requests.get(url, stream=True, timeout=120) as r:
-        r.raise_for_status()
-        with open(destino, 'wb') as f:
-            for chunk in r.iter_content(chunk_size=8192):
-                f.write(chunk)
-
-
-def extrair_zip(arquivo_zip: Path, destino: Path):
-    if destino.exists():
-        tqdm.write(f"📂 Já extraído: {destino}")
-        return
-
-    tqdm.write(f"🗜️ Extraindo: {arquivo_zip.name}")
-    with zipfile.ZipFile(arquivo_zip, 'r') as zip_ref:
-        zip_ref.extractall(destino)
-
+# Usa o Python atual da venv para rodar subprocessos
+PYTHON_EXEC = sys.executable
 
 def rodar_importer(script_path: str, gdb_path: Path, camada: str, distribuidora: str, ano: int, prefixo: str):
     status = get_status(prefixo, ano, camada)
-    if status == "success":
-        tqdm.write(f"✅ Já importado: {camada} {prefixo} {ano}")
+    if status == "completed":
+        tqdm.write(f"✅ Já importado: {camada} {prefixo}")
         return
 
-    tqdm.write(f"⚙️  Importando {camada} para {prefixo} {ano}")
+    tqdm.write(f"⚙️  Importando {camada} para {prefixo}")
     run([
-        "python", script_path,
+        PYTHON_EXEC, script_path,
         "--gdb", str(gdb_path),
         "--ano", str(ano),
         "--distribuidora", distribuidora,
         "--prefixo", prefixo
-    ], check=False)
-
+    ],
+    check=False,
+    env={**os.environ, "PYTHONPATH": str(ROOT)}  # <- IMPORTANTE
+)
 
 def main():
-    tqdm.write("📁 Iniciando orquestrador de ingestão batch...")
-    with open(DATASETS_JSON, "r", encoding="utf-8") as f:
-        datasets = json.load(f)
+    tqdm.write("📁 Iniciando orquestrador manual (mock)")
 
-    for ds in tqdm(datasets, desc="Distribuidoras"):
-        prefixo = ds["id"]
-        ano = ds["ano"]
-        distribuidora = ds["distribuidora"]
-        url = ds["download"]
+    for prefixo in PREFIXOS:
+        gdb_dir = DOWNLOADS_DIR / f"{prefixo}.gdb"
 
-        zip_path = DOWNLOADS_DIR / f"{prefixo}_{ano}.zip"
-        extract_dir = DOWNLOADS_DIR / f"{prefixo}_{ano}"
-        gdb_dir = next((d for d in extract_dir.glob("*.gdb")), None)
-
-        # Baixar e extrair
-        try:
-            baixar_zip(url, zip_path)
-            extrair_zip(zip_path, extract_dir)
-            if not gdb_dir:
-                gdb_dir = next((d for d in extract_dir.glob("*.gdb")), None)
-            if not gdb_dir:
-                raise Exception("GDB não encontrado após extração.")
-        except Exception as e:
-            tqdm.write(f"❌ Falha ao preparar GDB {prefixo}: {e}")
+        if not gdb_dir.exists():
+            tqdm.write(f"❌ .gdb não encontrado: {gdb_dir}")
             continue
 
-        # Importar camadas
+        try:
+            distribuidora = prefixo.rsplit("_", 1)[0]
+            ano = int(prefixo.rsplit("_", 1)[-1])
+        except Exception:
+            tqdm.write(f"⚠️  Prefixo inválido: {prefixo} — use formato NOME_UF_2023")
+            continue
+
         for camada in CAMADAS:
             script = IMPORTERS[camada]
             try:
@@ -97,8 +74,7 @@ def main():
                 tqdm.write(f"❌ Erro ao rodar {camada} ({prefixo}): {e}")
                 continue
 
-    tqdm.write("🏁 Orquestração finalizada.")
-
+    tqdm.write("🏁 Orquestração mock finalizada.")
 
 if __name__ == "__main__":
     main()
