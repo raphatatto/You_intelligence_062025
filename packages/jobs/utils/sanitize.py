@@ -6,24 +6,31 @@ import re
 
 def sanitize_numeric(serie, errors="coerce"):
     """
-    Limpa strings numéricas com vírgula, sufixo textual, traços, e converte para float.
-    Suporta notações tipo '1.13-06' e erros de OCR.
+    Limpa strings numéricas com vírgula, traços, textos, 'None', 'nan', etc., e converte para float.
+    Suporta notações com erro de OCR ou símbolos diversos. Ideal para PAC, DEM_CONT, SEMRED.
     """
+    null_set = {"", "none", "nan", "-", "***", "n/a", "null"}
+
     if isinstance(serie, pd.Series):
         return (
             serie
             .astype(str)
             .str.replace(",", ".", regex=False)
-            .str.replace(r"[^\d\.\-eE+]", "", regex=True)
-            .replace("", np.nan)
+            .str.replace(r"[^\d.\-eE+]", "", regex=True)
+            .str.strip()
+            .apply(lambda x: np.nan if x.lower() in null_set else x)
             .apply(lambda x: pd.to_numeric(x, errors=errors))
         )
+
     elif isinstance(serie, str):
-        cleaned = re.sub(r"[^\d\.\-eE+]", "", serie.replace(",", "."))
+        cleaned = re.sub(r"[^\d.\-eE+]", "", serie.replace(",", ".")).strip()
+        if cleaned.lower() in null_set:
+            return np.nan
         try:
             return float(cleaned)
         except:
             return np.nan
+
     else:
         try:
             return float(serie)
@@ -58,6 +65,8 @@ def sanitize_int(serie):
 
 
 def sanitize_str(serie):
+
+
     """
     Remove caracteres de controle e espaços desnecessários.
     """
@@ -67,6 +76,8 @@ def sanitize_str(serie):
         .str.replace(r"[\r\n\t]+", " ", regex=True)
         .str.strip()
     )
+
+
 def sanitize_grupo_tensao(val: str | None) -> str | None:
     if not val:
         return None

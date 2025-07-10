@@ -43,12 +43,13 @@ def importar_ponnot(
 
         tqdm.write(f"📖 Lendo camada '{layer}'...")
         gdf = gpd.read_file(str(gdb_path), layer=layer)
-
-        if len(gdf) == 0:
+        if gdf.empty:
             registrar_status(prefixo, ano, camada, "no_new_rows")
             return
 
-        # Gera DataFrame com coordenadas e pn_id
+        if "COD_ID" not in gdf.columns:
+            raise Exception("Coluna 'COD_ID' não encontrada na camada PONNOT.")
+
         tqdm.write("🧭 Extraindo coordenadas...")
         df = pd.DataFrame({
             "pn_id": gdf["COD_ID"],
@@ -56,12 +57,14 @@ def importar_ponnot(
             "longitude": gdf.geometry.x
         })
 
-        conn = get_db_connection()
-        with conn.cursor() as cur:
-            insert_copy(cur, df, "ponto_notavel", ["pn_id", "latitude", "longitude"])
-        conn.commit()
+        df = df.drop_duplicates(subset=["pn_id"]).dropna(subset=["latitude", "longitude"]).reset_index(drop=True)
 
-        registrar_status(prefixo, ano, camada, "success")
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                insert_copy(cur, df, "ponto_notavel", ["pn_id", "latitude", "longitude"])
+            conn.commit()
+
+        registrar_status(prefixo, ano, camada, "completed")
         tqdm.write("🎉 Importação PONNOT finalizada com sucesso!")
 
     except Exception as e:

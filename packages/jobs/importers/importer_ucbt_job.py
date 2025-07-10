@@ -22,7 +22,6 @@ from packages.jobs.utils.sanitize import (
     sanitize_classe,
 )
 
-
 REQUIRED_COLUMNS = [
     "COD_ID", "DIST", "CNAE", "DAT_CON", "PAC", "GRU_TEN", "GRU_TAR", "TIP_SIST",
     "SIT_ATIV", "CLAS_SUB", "CONJ", "MUN", "BRR", "CEP", "PN_CON", "DESCR"
@@ -55,10 +54,11 @@ def importar_ucbt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
 
         tqdm.write(f"📖 Lendo camada '{layer}'...")
         gdf = gpd.read_file(str(gdb_path), layer=layer)
-
         if len(gdf) == 0:
             registrar_status(prefixo, ano, camada, "no_new_rows")
             return
+
+        gdf.replace(["None", "nan", "", "***", "-"], None, inplace=True)
 
         sujas = gdf.columns[gdf.astype(str).apply(lambda col: col.str.contains("106022|YEL", na=False)).any()]
         gdf.drop(columns=sujas, inplace=True)
@@ -67,9 +67,7 @@ def importar_ucbt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
             if col not in gdf.columns:
                 gdf[col] = None
 
-                tqdm.write("🧱 Transformando UCBT para lead_bruto...")
-
-        # Verifica distribuidora_id único
+        tqdm.write("🧱 Transformando UCBT para lead_bruto...")
         dist_id = sanitize_int(gdf["DIST"]).dropna().unique()
         if len(dist_id) != 1:
             raise ValueError(f"Esperado um único código de distribuidora, mas encontrei: {dist_id}")
@@ -98,11 +96,30 @@ def importar_ucbt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
             "municipio_id": sanitize_int(gdf["MUN"]),
             "bairro": sanitize_str(gdf["BRR"]),
             "cep": sanitize_int(gdf["CEP"]),
-            "pac": sanitize_int(gdf["PAC"]),
+            "pac": sanitize_numeric(gdf["PAC"]),
             "pn_con": sanitize_str(gdf["PN_CON"]),
             "descricao": sanitize_str(gdf["DESCR"]),
         })
 
+        duplicados = df_bruto[df_bruto.duplicated(subset=["uc_id"], keep=False)]
+        if not duplicados.empty:
+            tqdm.write(f"⚠️ {len(duplicados)} registros duplicados de uc_id detectados e ignorados.")
+            df_bruto = df_bruto.drop_duplicates(subset=["uc_id"], keep="first").reset_index(drop=True)
+
+        df_bruto = df_bruto[df_bruto["uc_id"].notnull()].reset_index(drop=True)
+        gdf = gdf.loc[df_bruto.index].reset_index(drop=True)
+
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                tqdm.write("🚀 Inserindo no banco (lead_bruto)...")
+                insert_copy(cur, df_bruto, "lead_bruto", df_bruto.columns.tolist())
+            conn.commit()
+
+            df_ids = pd.read_sql("""
+                SELECT id AS lead_bruto_id, uc_id
+                FROM lead_bruto
+                WHERE import_id = %s
+            """, conn, params=(import_id,))
 
         tqdm.write("📈 Transformando UCBT para lead_energia_mensal...")
         energia_df = []
@@ -114,18 +131,23 @@ def importar_ucbt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
                 "origem": camada
             }))
         df_energia = pd.concat(energia_df).reset_index(drop=True)
+        df_energia = df_energia.merge(df_ids, on="uc_id").drop(columns=["uc_id"])
 
         tqdm.write("📊 Transformando UCBT para lead_demanda_mensal...")
         demanda_df = []
         for mes in range(1, 13):
+            valor = sanitize_numeric(gdf.get(f"DEM_{mes:02d}"))
             demanda_df.append(pd.DataFrame({
                 "uc_id": df_bruto["uc_id"],
                 "mes": mes,
-                "dem_ponta": sanitize_numeric(gdf.get(f"DEM_{mes:02d}")),
-                "dem_fora_ponta": sanitize_numeric(gdf.get(f"DEM_{mes:02d}")),
+                "demanda_ponta": valor,
+                "demanda_fora_ponta": valor,
+                "demanda_total": valor,
+                "demanda_contratada": None,
                 "origem": camada
             }))
         df_demanda = pd.concat(demanda_df).reset_index(drop=True)
+        df_demanda = df_demanda.merge(df_ids, on="uc_id").drop(columns=["uc_id"])
 
         tqdm.write("📉 Transformando UCBT para lead_qualidade_mensal...")
         qualidade_df = []
@@ -135,14 +157,14 @@ def importar_ucbt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
                 "mes": mes,
                 "dic": sanitize_numeric(gdf.get(f"DIC_{mes:02d}")),
                 "fic": sanitize_numeric(gdf.get(f"FIC_{mes:02d}")),
+                "sremede": None,
                 "origem": camada
             }))
         df_qualidade = pd.concat(qualidade_df).reset_index(drop=True)
+        df_qualidade = df_qualidade.merge(df_ids, on="uc_id").drop(columns=["uc_id"])
 
         with get_db_connection() as conn:
             with conn.cursor() as cur:
-                tqdm.write("🚀 Inserindo no banco...")
-                insert_copy(cur, df_bruto, "lead_bruto", df_bruto.columns.tolist())
                 insert_copy(cur, df_energia, "lead_energia_mensal", df_energia.columns.tolist())
                 insert_copy(cur, df_demanda, "lead_demanda_mensal", df_demanda.columns.tolist())
                 insert_copy(cur, df_qualidade, "lead_qualidade_mensal", df_qualidade.columns.tolist())

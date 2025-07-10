@@ -24,7 +24,8 @@ from packages.jobs.utils.sanitize import (
 
 REQUIRED_COLUMNS = [
     "COD_ID", "DIST", "CNAE", "DAT_CON", "PAC", "GRU_TEN", "GRU_TAR", "TIP_SIST",
-    "SIT_ATIV", "CLAS_SUB", "CONJ", "MUN", "BRR", "CEP", "PN_CON", "DESCR"
+    "SIT_ATIV", "CLAS_SUB", "CONJ", "MUN", "BRR", "CEP", "PN_CON", "DESCR",
+    "CAR_INST", "CTMT", "UNI_TR_AT", "SUB", "TIP_CC", "FAS_CON", "TEN_FORN", "DEM_CONT", "SEMRED"
 ]
 
 def detectar_layer(gdb_path: Path) -> str:
@@ -54,10 +55,11 @@ def importar_ucmt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
 
         tqdm.write(f"📖 Lendo camada '{layer}'...")
         gdf = gpd.read_file(str(gdb_path), layer=layer)
-
         if len(gdf) == 0:
             registrar_status(prefixo, ano, camada, "no_new_rows")
             return
+
+        gdf.replace(["None", "nan", "", "***", "-"], None, inplace=True)
 
         sujas = gdf.columns[gdf.astype(str).apply(lambda col: col.str.contains("106022|YEL", na=False)).any()]
         gdf.drop(columns=sujas, inplace=True)
@@ -66,13 +68,12 @@ def importar_ucmt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
             if col not in gdf.columns:
                 gdf[col] = None
 
-        tqdm.write("🧱️ Transformando UCMT para lead_bruto...")
-
         dist_id = sanitize_int(gdf["DIST"]).dropna().unique()
         if len(dist_id) != 1:
             raise ValueError(f"Esperado um único código de distribuidora, mas encontrei: {dist_id}")
         dist_id = int(dist_id[0])
 
+        tqdm.write("🧱️ Transformando UCMT para lead_bruto...")
         df_bruto = pd.DataFrame({
             "uc_id": [
                 gerar_uc_id(row["COD_ID"], ano, camada, dist_id)
@@ -92,11 +93,11 @@ def importar_ucmt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
             "situacao": gdf["SIT_ATIV"].apply(sanitize_situacao),
             "classe": gdf["CLAS_SUB"].apply(sanitize_classe),
             "segmento": None,
-            "subestacao": None,
+            "subestacao": sanitize_str(gdf["SUB"]),
             "municipio_id": sanitize_int(gdf["MUN"]),
             "bairro": sanitize_str(gdf["BRR"]),
             "cep": sanitize_int(gdf["CEP"]),
-            "pac": sanitize_int(gdf["PAC"]),
+            "pac": sanitize_numeric(gdf["PAC"]),
             "pn_con": sanitize_str(gdf["PN_CON"]),
             "descricao": sanitize_str(gdf["DESCR"]),
         })
@@ -109,6 +110,18 @@ def importar_ucmt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
         df_bruto = df_bruto[df_bruto["uc_id"].notnull()].reset_index(drop=True)
         gdf = gdf.loc[df_bruto.index].reset_index(drop=True)
 
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                tqdm.write("🚀 Inserindo no banco (lead_bruto)...")
+                insert_copy(cur, df_bruto, "lead_bruto", df_bruto.columns.tolist())
+            conn.commit()
+
+            df_ids = pd.read_sql("""
+                SELECT id AS lead_bruto_id, uc_id
+                FROM lead_bruto
+                WHERE import_id = %s
+            """, conn, params=(import_id,))
+
         tqdm.write("📈 Transformando UCMT para lead_energia_mensal...")
         energia_df = []
         for mes in range(1, 13):
@@ -119,6 +132,7 @@ def importar_ucmt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
                 "origem": camada
             }))
         df_energia = pd.concat(energia_df).reset_index(drop=True)
+        df_energia = df_energia.merge(df_ids, on="uc_id").drop(columns=["uc_id"])
 
         tqdm.write("📊 Transformando UCMT para lead_demanda_mensal...")
         demanda_df = []
@@ -130,10 +144,11 @@ def importar_ucmt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
                 "demanda_ponta": valor,
                 "demanda_fora_ponta": valor,
                 "demanda_total": valor,
-                "demanda_contratada": None,
+                "demanda_contratada": sanitize_numeric(gdf.get("DEM_CONT")),
                 "origem": camada
             }))
         df_demanda = pd.concat(demanda_df).reset_index(drop=True)
+        df_demanda = df_demanda.merge(df_ids, on="uc_id").drop(columns=["uc_id"])
 
         tqdm.write("📉 Transformando UCMT para lead_qualidade_mensal...")
         qualidade_df = []
@@ -143,25 +158,10 @@ def importar_ucmt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
                 "mes": mes,
                 "dic": sanitize_numeric(gdf.get(f"DIC_{mes:02d}")),
                 "fic": sanitize_numeric(gdf.get(f"FIC_{mes:02d}")),
+                "sremede": sanitize_numeric(gdf.get("SEMRED")),
                 "origem": camada
             }))
         df_qualidade = pd.concat(qualidade_df).reset_index(drop=True)
-
-        with get_db_connection() as conn:
-            with conn.cursor() as cur:
-                tqdm.write("🚀 Inserindo no banco (lead_bruto)...")
-                insert_copy(cur, df_bruto, "lead_bruto", df_bruto.columns.tolist())
-            conn.commit()
-
-            tqdm.write("🔍 Recuperando IDs para tabelas filhas...")
-            df_ids = pd.read_sql("""
-                SELECT id AS lead_bruto_id, uc_id
-                FROM lead_bruto
-                WHERE import_id = %s
-            """, conn, params=(import_id,))
-
-        df_energia = df_energia.merge(df_ids, on="uc_id").drop(columns=["uc_id"])
-        df_demanda = df_demanda.merge(df_ids, on="uc_id").drop(columns=["uc_id"])
         df_qualidade = df_qualidade.merge(df_ids, on="uc_id").drop(columns=["uc_id"])
 
         with get_db_connection() as conn:

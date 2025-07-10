@@ -25,7 +25,7 @@ from packages.jobs.utils.sanitize import (
 RELEVANT_COLUMNS = [
     "COD_ID", "DIST", "CNAE", "DAT_CON", "PAC", "GRU_TEN", "GRU_TAR", "TIP_SIST",
     "SIT_ATIV", "CLAS_SUB", "CONJ", "MUN", "BRR", "CEP", "PN_CON", "DESCR",
-    "CTAT", "SUB", "TIP_CC", "FAS_CON", "TEN_FORN", "CAR_INST"
+    "CTAT", "SUB", "TIP_CC", "FAS_CON", "TEN_FORN", "CAR_INST", "DEM_CONT", "SEMRED"
 ]
 
 def detectar_layer(gdb_path: Path) -> str:
@@ -59,6 +59,8 @@ def importar_ucat(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
         if len(gdf) == 0:
             registrar_status(prefixo, ano, camada, "no_new_rows")
             return
+
+        gdf.replace(["None", "nan", "", "***", "-"], None, inplace=True)
 
         sujas = gdf.columns[gdf.astype(str).apply(lambda col: col.str.contains("106022|YEL", na=False)).any()]
         gdf.drop(columns=sujas, inplace=True)
@@ -97,7 +99,7 @@ def importar_ucat(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
             "municipio_id": sanitize_int(gdf["MUN"]),
             "bairro": sanitize_str(gdf["BRR"]),
             "cep": sanitize_int(gdf["CEP"]),
-            "pac": sanitize_int(gdf["PAC"]),
+            "pac": sanitize_numeric(gdf["PAC"]),
             "pn_con": sanitize_str(gdf["PN_CON"]),
             "descricao": sanitize_str(gdf["DESCR"]),
         })
@@ -134,7 +136,7 @@ def importar_ucat(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
                 "demanda_ponta": ponta,
                 "demanda_fora_ponta": fora_ponta,
                 "demanda_total": ponta + fora_ponta,
-                "demanda_contratada": None,
+                "demanda_contratada": sanitize_numeric(gdf.get("DEM_CONT")),
                 "origem": camada
             }))
         df_demanda = pd.concat(demanda_df).reset_index(drop=True)
@@ -147,18 +149,19 @@ def importar_ucat(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
                 "mes": mes,
                 "dic": sanitize_numeric(gdf.get(f"DIC_{mes:02d}")),
                 "fic": sanitize_numeric(gdf.get(f"FIC_{mes:02d}")),
+                "sremede": sanitize_numeric(gdf.get("SEMRED")),
                 "origem": camada
             }))
         df_qualidade = pd.concat(qualidade_df).reset_index(drop=True)
 
+        # Inserir tudo
         with get_db_connection() as conn:
             with conn.cursor() as cur:
                 tqdm.write("🚀 Inserindo no banco (lead_bruto)...")
                 insert_copy(cur, df_bruto, "lead_bruto", df_bruto.columns.tolist())
-
             conn.commit()
 
-            tqdm.write("🔍 Recuperando IDs para tabelas filhas...")
+            # Buscar ID real
             df_ids = pd.read_sql("""
                 SELECT id AS lead_bruto_id, uc_id
                 FROM lead_bruto
