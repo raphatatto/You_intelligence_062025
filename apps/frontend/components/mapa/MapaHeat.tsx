@@ -5,6 +5,7 @@ import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { FeatureCollection, Feature, Point } from 'geojson';
 
+const base = process.env.NEXT_PUBLIC_API_BASE ?? ''
 export default function MapaHeat() {
   const mapRef = useRef<maplibregl.Map | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -30,7 +31,7 @@ export default function MapaHeat() {
     map.on('load', async () => {
       try {
         console.log('📡 Mapa carregado! Buscando leads...');
-        const res = await fetch('/mock/leads.json');
+        const res = await fetch(`${base}/leads-geo`);
 
         if (!res.ok) throw new Error(`Erro no fetch: ${res.status}`);
 
@@ -39,16 +40,23 @@ export default function MapaHeat() {
 
         const geojson: FeatureCollection<Point> = {
           type: 'FeatureCollection',
-          features: leads.map((l: any): Feature<Point> => ({
+          features: leads
+          .filter((l: any) =>
+            typeof l.latitude === 'number' &&
+            typeof l.longitude === 'number' &&
+            !isNaN(l.latitude) &&
+            !isNaN(l.longitude)
+          )
+          .map((l: any): Feature<Point> => ({
             type: 'Feature',
             geometry: {
               type: 'Point',
-              coordinates: [l.lng, l.lat],
+              coordinates: [l.longitude, l.latitude],
             },
             properties: {
               peso: l.dicMed ?? 1,
             },
-          })),
+          }))
         };
 
         map.addSource('leads', {

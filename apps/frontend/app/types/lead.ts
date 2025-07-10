@@ -11,6 +11,7 @@ export type Lead = {
   segmento: string
   descricao?: string
   potencia?: number; 
-  lat: number
-  lng: number
+  longitude: number
+  latitude: number
+  tipo: string
 }

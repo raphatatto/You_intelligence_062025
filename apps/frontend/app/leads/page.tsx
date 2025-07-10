@@ -26,57 +26,73 @@ function exportarParaExcel(leadsParaExportar: Lead[], nomeArquivo = 'leads.xlsx'
 export default function LeadsPage() {
   const [pagina, setPagina] = useState(1)
   const [buscaInput, setBuscaInput] = useState('')
-  const { estado, distribuidora, segmento, clearFilters, setEstado, setBusca, busca } = useFilters()
+  const { estado, distribuidora, segmento, tipo, clearFilters, setEstado, setBusca, busca, setTipo } = useFilters()
   const { order, setOrder } = useSort()
   const { leads, isLoading, error } = useLeads()
 
+  console.log('[🚨] Exemplo de lead:', leads[0])
+  console.log('[⚙️] Filtros aplicados:', { estado, tipo, distribuidora, segmento, busca })
 
   const estados = useMemo<string[]>(() => {
     return Array.from(new Set(leads.map((l) => l.estado).filter(Boolean))).sort()
   }, [leads])
 
-  const leadsFiltrados = useMemo<Lead[]>(() => {
-    let arr = [...leads]
+const leadsFiltrados = useMemo<Lead[]>(() => {
+  let arr = [...leads]
 
-    if (estado) arr = arr.filter((l) => l.estado === estado)
-    if (distribuidora) arr = arr.filter((l) => l.distribuidora === distribuidora)
-    if (segmento) arr = arr.filter((l) => l.cnae === segmento)
+  const filtroEstado = estado.trim().toLowerCase()
+  const filtroDistribuidora = distribuidora.trim()
+  const filtroSegmento = segmento.trim()
+  const filtroTipo = tipo.trim()
 
-    if (busca) {
-      const term = stripDiacritics(busca.toLowerCase())
+  if (filtroEstado)
+    arr = arr.filter((l) => l.estado?.toLowerCase() === filtroEstado)
 
-      arr = arr.filter((l) => {
-        const estado = stripDiacritics(l.estado?.toLowerCase() ?? '')
-        const cnae = stripDiacritics(l.cnae?.toLowerCase() ?? '')
-        const distribuidora = stripDiacritics(DISTRIBUIDORAS_MAP[l.distribuidora]?.toLowerCase() ?? '')
-        const segmentoNome = stripDiacritics(CNAE_SEGMENTOS[l.cnae]?.toLowerCase() ?? '')
-        const segmentoLead = stripDiacritics(l.segmento?.toLowerCase() ?? '')
+  if (filtroDistribuidora)
+  arr = arr.filter((l) =>
+    DISTRIBUIDORAS_MAP[l.distribuidora] === filtroDistribuidora
+  )
 
-        return (
-          estado.includes(term) ||
-          cnae.includes(term) ||
-          distribuidora.includes(term) ||
-          segmentoNome.includes(term) ||
-          segmentoLead.includes(term)
-        )
-      })
-    }
+  if (filtroSegmento)
+    arr = arr.filter((l) => l.cnae === filtroSegmento)
 
+  if (filtroTipo)
+  arr = arr.filter((l) => l.tipo === filtroTipo)
 
+  if (busca) {
+    const term = stripDiacritics(busca.toLowerCase())
 
-    switch (order) {
-      case 'dic-asc':
-        arr.sort((a, b) => (a.dicMed ?? 0) - (b.dicMed ?? 0)); break
-      case 'dic-desc':
-        arr.sort((a, b) => (b.dicMed ?? 0) - (a.dicMed ?? 0)); break
-      case 'fic-asc':
-        arr.sort((a, b) => (a.ficMed ?? 0) - (b.ficMed ?? 0)); break
-      case 'fic-desc':
-        arr.sort((a, b) => (b.ficMed ?? 0) - (a.ficMed ?? 0)); break
-    }
+    arr = arr.filter((l) => {
+      const estado = stripDiacritics(l.estado?.toLowerCase() ?? '')
+      const cnae = stripDiacritics(l.cnae?.toLowerCase() ?? '')
+      const distribuidora = stripDiacritics(DISTRIBUIDORAS_MAP[l.distribuidora]?.toLowerCase() ?? '')
+      const segmentoNome = stripDiacritics(CNAE_SEGMENTOS[l.cnae]?.toLowerCase() ?? '')
+      const segmentoLead = stripDiacritics(l.segmento?.toLowerCase() ?? '')
 
-    return arr
-  }, [leads, estado, distribuidora, segmento, order, busca])
+      return (
+        estado.includes(term) ||
+        cnae.includes(term) ||
+        distribuidora.includes(term) ||
+        segmentoNome.includes(term) ||
+        segmentoLead.includes(term)
+      )
+    })
+  }
+
+  switch (order) {
+    case 'dic-asc':
+      arr.sort((a, b) => (a.dicMed ?? 0) - (b.dicMed ?? 0)); break
+    case 'dic-desc':
+      arr.sort((a, b) => (b.dicMed ?? 0) - (a.dicMed ?? 0)); break
+    case 'fic-asc':
+      arr.sort((a, b) => (a.ficMed ?? 0) - (b.ficMed ?? 0)); break
+    case 'fic-desc':
+      arr.sort((a, b) => (b.ficMed ?? 0) - (a.ficMed ?? 0)); break
+  }
+
+  return arr
+}, [leads, estado, distribuidora, segmento, order, busca, tipo])
+
 
   const totalPaginas = Math.ceil(leadsFiltrados.length / ITEMS_POR_PAGINA)
   const inicio = (pagina - 1) * ITEMS_POR_PAGINA
@@ -107,7 +123,7 @@ return (
         >
           <option value="">Todos</option>
           {estados.map((uf) => (
-            <option key={uf} value={uf}>{uf}</option>
+          <option key={uf} value={uf}>{uf.toUpperCase()}</option>
           ))}
         </select>
       </label>
@@ -124,6 +140,18 @@ return (
           <option value="dic-desc">DIC ↓</option>
           <option value="fic-asc">FIC ↑</option>
           <option value="fic-desc">FIC ↓</option>
+        </select>
+      </label>
+      <label className="flex items-center gap-2 text-white text-sm">
+        tipo:
+        <select
+          value={tipo}
+          onChange={(e) => setTipo(e.target.value)}
+          className="bg-zinc-800 text-xs text-white border border-zinc-600 px-2 py-1 rounded"
+        >
+          <option value="">Todos</option>
+          <option value="ucmt">UCMT</option>
+          <option value="ucbt">UCBT</option>
         </select>
       </label>
 

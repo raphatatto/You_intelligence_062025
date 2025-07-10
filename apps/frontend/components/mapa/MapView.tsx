@@ -32,8 +32,8 @@ export default function MapView({ leads, selectedId }: Props) {
 
 
       const pontos: LeadComCoords[] = leadsValidos
-      .filter((l) => l.lat !== undefined && l.lng !== undefined)
-      .map((l) => ({ ...l, lat: Number(l.lat), lng: Number(l.lng) }))
+      .filter((l) => l.latitude !== undefined && l.longitude !== undefined)
+      .map((l) => ({ ...l, lat: Number(l.latitude), lng: Number(l.longitude) }))
 
       setPontos(pontos)
     }
