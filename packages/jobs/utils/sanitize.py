@@ -211,3 +211,9 @@ def sanitize_classe(val: str | None) -> str | None:
     # Último fallback: retorna como está
     return base
 
+def sanitize_pac(value):
+    try:
+        val = float(value)
+        return int(val) if 0 < val < 1_000_000 else None  # aceita até 1 MW
+    except:
+        return None

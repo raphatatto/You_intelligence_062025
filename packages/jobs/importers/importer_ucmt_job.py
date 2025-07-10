@@ -20,6 +20,7 @@ from packages.jobs.utils.sanitize import (
     sanitize_tipo_sistema,
     sanitize_situacao,
     sanitize_classe,
+    sanitize_pac,
 )
 
 REQUIRED_COLUMNS = [
@@ -97,7 +98,7 @@ def importar_ucmt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
             "municipio_id": sanitize_int(gdf["MUN"]),
             "bairro": sanitize_str(gdf["BRR"]),
             "cep": sanitize_int(gdf["CEP"]),
-            "pac": sanitize_numeric(gdf["PAC"]),
+            "pac": gdf["PAC"].apply(sanitize_pac),
             "pn_con": sanitize_str(gdf["PN_CON"]),
             "descricao": sanitize_str(gdf["DESCR"]),
         })
