@@ -16,87 +16,42 @@ def parse_array_text(text: str | None) -> list[float] | None:
     except Exception:
         return None
 
+# 🔍 Listagem de leads (com view completa)
 async def list_leads(db: AsyncSession, skip: int = 0, limit: int = 100):
     query = text("""
-        SELECT
-            l.id,
-            i.nome_fantasia AS nome,
-            i.cnpj,
-            uc.classe,
-            uc.grupo_tensao AS subgrupo,
-            uc.modalidade,
-            i.uf AS estado,
-            i.municipio,
-            l.distribuidora,
-            uc.potencia,
-            l.latitude,
-            l.longitude,
-            uc.segmento,
-            l.status,
-            uc.cnae,
-            lq.dic AS dicMes,
-            lq.fic AS ficMes
-        FROM plead.lead l
-        LEFT JOIN plead.info_leads i ON l.id = i.lead_id
-        LEFT JOIN plead.unidade_consumidora uc ON l.id = uc.lead_id
-        LEFT JOIN plead.lead_qualidade lq ON uc.id = lq.uc_id
-        ORDER BY i.nome_fantasia
-        OFFSET :skip
-        LIMIT :limit
+        SELECT *
+        FROM intel_lead.vw_lead_com_cnae_desc
+        ORDER BY nome_fantasia
+        OFFSET :skip LIMIT :limit
     """)
-
-    total_query = text("SELECT COUNT(*) FROM plead.lead")
-
     result = await db.execute(query, {"skip": skip, "limit": limit})
     rows = result.mappings().all()
-
-    total_result = await db.execute(total_query)
-    total = total_result.scalar_one()
 
     leads = []
     for row in rows:
         data = dict(row)
         dic_array = parse_array_text(data.get("dicMes"))
         fic_array = parse_array_text(data.get("ficMes"))
-
         data["dicMes"] = dic_array
         data["ficMes"] = fic_array
         data["dicMed"] = round(sum(dic_array) / len(dic_array), 2) if dic_array else None
         data["ficMed"] = round(sum(fic_array) / len(fic_array), 2) if fic_array else None
-
         leads.append(LeadOut(**data))
+
+    total_query = text("SELECT COUNT(*) FROM intel_lead.lead_bruto")
+    total_result = await db.execute(total_query)
+    total = total_result.scalar_one()
 
     return total, leads
 
-async def get_lead(db: AsyncSession, lead_id: str) -> LeadDetail | None:
+# 📋 Detalhe completo de um lead
+async def get_lead(db: AsyncSession, uc_id: str) -> LeadDetail | None:
     query = text("""
-        SELECT
-            l.id,
-            i.nome_fantasia AS nome,
-            i.cnpj,
-            uc.classe,
-            uc.grupo_tensao AS subgrupo,
-            uc.modalidade,
-            i.uf AS estado,
-            i.municipio,
-            l.distribuidora,
-            uc.potencia,
-            l.latitude,
-            l.longitude,
-            uc.segmento,
-            l.status,
-            uc.cnae,
-            uc.data_conexao,
-            lq.dic AS dicMes,
-            lq.fic AS ficMes
-        FROM plead.lead l
-        LEFT JOIN plead.info_leads i ON l.id = i.lead_id
-        LEFT JOIN plead.unidade_consumidora uc ON l.id = uc.lead_id
-        LEFT JOIN plead.lead_qualidade lq ON uc.id = lq.uc_id
-        WHERE l.id = :lead_id
+        SELECT *
+        FROM intel_lead.vw_lead_com_cnae_desc
+        WHERE uc_id = :uc_id
     """)
-
-    result = await db.execute(query, {"lead_id": lead_id})
+    result = await db.execute(query, {"uc_id": uc_id})
     row = result.mappings().first()
     if not row:
         return None
@@ -104,7 +59,6 @@ async def get_lead(db: AsyncSession, lead_id: str) -> LeadDetail | None:
     data = dict(row)
     dic_array = parse_array_text(data.get("dicMes"))
     fic_array = parse_array_text(data.get("ficMes"))
-
     data["dicMes"] = dic_array
     data["ficMes"] = fic_array
     data["dicMed"] = round(sum(dic_array) / len(dic_array), 2) if dic_array else None
@@ -112,15 +66,14 @@ async def get_lead(db: AsyncSession, lead_id: str) -> LeadDetail | None:
 
     return LeadDetail(**data)
 
-async def get_qualidade(db: AsyncSession, lead_id: str) -> LeadQualidade | None:
+# 📈 Dados de qualidade de um lead (caso queira isolado)
+async def get_qualidade(db: AsyncSession, uc_id: str) -> LeadQualidade | None:
     query = text("""
-        SELECT
-            dic,
-            fic
-        FROM plead.lead_qualidade
-        WHERE lead_id = :lead_id
+        SELECT dic, fic
+        FROM intel_lead.lead_qualidade_mensal
+        WHERE uc_id = :uc_id
     """)
-    result = await db.execute(query, {"lead_id": lead_id})
+    result = await db.execute(query, {"uc_id": uc_id})
     row = result.mappings().first()
     if not row:
         return None
@@ -132,24 +85,16 @@ async def get_qualidade(db: AsyncSession, lead_id: str) -> LeadQualidade | None:
         dicMes=dic_array,
         ficMes=fic_array,
         dicMed=round(sum(dic_array) / len(dic_array), 2) if dic_array else None,
-        ficMed=round(sum(fic_array) / len(fic_array), 2) if fic_array else None
+        ficMed=round(sum(fic_array) / len(fic_array), 2) if fic_array else None,
     )
 
+# 🗺️ Pontos no mapa
 async def get_map_points(db: AsyncSession, status: str | None, distribuidora: str | None, limit: int = 1000):
     query = text("""
-        SELECT
-            l.id,
-            l.latitude,
-            l.longitude,
-            uc.classe,
-            uc.grupo_tensao AS subgrupo,
-            uc.potencia,
-            l.distribuidora,
-            l.status
-        FROM plead.lead l
-        LEFT JOIN plead.unidade_consumidora uc ON l.id = uc.lead_id
-        WHERE (:status IS NULL OR l.status = :status)
-          AND (:distribuidora IS NULL OR l.distribuidora = :distribuidora)
+        SELECT uc_id, latitude, longitude, classe, grupo_tensao, pac AS potencia, distribuidora_id AS distribuidora, status
+        FROM intel_lead.lead_com_coordenadas
+        WHERE (:status IS NULL OR status = :status)
+          AND (:distribuidora IS NULL OR distribuidora_id = :distribuidora)
         LIMIT :limit
     """)
     result = await db.execute(query, {
@@ -159,40 +104,34 @@ async def get_map_points(db: AsyncSession, status: str | None, distribuidora: st
     })
     return [LeadMapOut(**row._mapping) for row in result]
 
-async def heatmap_points(db: AsyncSession, segment: str | None):
+# 🔥 Heatmap (peso = número de UCs por coordenada)
+async def heatmap_points(db: AsyncSession, segmento: str | None):
     query = text("""
-        SELECT
-            l.latitude,
-            l.longitude,
-            COUNT(*) as peso
-        FROM plead.lead l
-        LEFT JOIN plead.unidade_consumidora uc ON l.id = uc.lead_id
-        WHERE (:segment IS NULL OR uc.segmento = :segment)
-        GROUP BY l.latitude, l.longitude
+        SELECT latitude, longitude, COUNT(*) AS peso
+        FROM intel_lead.lead_com_coordenadas
+        WHERE (:segmento IS NULL OR segmento = :segmento)
+        GROUP BY latitude, longitude
     """)
-    result = await db.execute(query, {"segment": segment})
+    result = await db.execute(query, {"segmento": segmento})
     return [tuple(row) for row in result]
 
+# 📊 Resumo estatístico (por filtro)
 async def get_resumo(db: AsyncSession, estado: str | None, municipio: str | None, segmento: str | None):
     query = text("""
         SELECT
             COUNT(*) AS total_leads,
-            COUNT(i.cnpj) FILTER (WHERE i.cnpj IS NOT NULL) AS total_com_cnpj,
-            COUNT(*) FILTER (WHERE l.status = 'enriquecido') AS total_enriquecidos,
-            AVG(uc.consumo_medio) AS media_consumo,
-            AVG(uc.potencia) AS media_potencia,
-            json_object_agg(uc.classe, count(*)) FILTER (WHERE uc.classe IS NOT NULL) AS por_classe
-        FROM plead.lead l
-        LEFT JOIN plead.info_leads i ON l.id = i.lead_id
-        LEFT JOIN plead.unidade_consumidora uc ON l.id = uc.lead_id
-        WHERE (:estado IS NULL OR i.uf = :estado)
-        AND (:municipio IS NULL OR i.municipio = :municipio)
-        AND (:segmento IS NULL OR uc.segmento = :segmento)
-
+            COUNT(cnpj) FILTER (WHERE cnpj IS NOT NULL) AS total_com_cnpj,
+            COUNT(*) FILTER (WHERE status = 'enriched') AS total_enriquecidos,
+            AVG(pac) AS media_potencia,
+            json_object_agg(classe, count(*)) FILTER (WHERE classe IS NOT NULL) AS por_classe
+        FROM intel_lead.vw_lead_com_cnae_desc
+        WHERE (:estado IS NULL OR estado = :estado)
+          AND (:municipio IS NULL OR municipio = :municipio)
+          AND (:segmento IS NULL OR segmento = :segmento)
     """)
-    result = await db.execute(query, {
+    result = await db.execute({
         "estado": estado,
         "municipio": municipio,
-        "segmento": segmento,
+        "segmento": segmento
     })
     return LeadResumo(**result.mappings().first())

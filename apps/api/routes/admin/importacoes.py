@@ -9,17 +9,18 @@ import uuid
 router = APIRouter(prefix="/v1/admin/importacoes", tags=["admin-importacoes"])
 
 
-# GET - Lista importações
+# GET - Lista últimas 100 importações
 @router.get("")
 async def listar_importacoes(db: AsyncSession = Depends(get_session)):
     query = text("""
         SELECT 
-            distribuidora, 
-            ano, 
-            camada, 
-            status, 
+            import_id,
+            distribuidora_id,
+            ano,
+            camada,
+            status,
             data_execucao
-        FROM plead.import_status
+        FROM intel_lead.import_status
         ORDER BY data_execucao DESC
         LIMIT 100
     """)
@@ -27,13 +28,13 @@ async def listar_importacoes(db: AsyncSession = Depends(get_session)):
     return [dict(r) for r in res.fetchall()]
 
 
-# POST - Disparar importação
+# POST - Disparar nova importação
 class ImportacaoPayload(BaseModel):
-    distribuidora: str
-    prefixo: str
-    ano: int
-    url: str
-    camadas: list[str]  # Ex: ["UCAT", "UCMT", "UCBT"]
+    distribuidora: str       # Ex: "CPFL_Paulista"
+    prefixo: str             # Ex: "CPFL_Paulista"
+    ano: int                 # Ex: 2023
+    url: str                 # Link para o GDB
+    camadas: list[str]       # Ex: ["UCAT", "UCMT", "UCBT"]
 
 @router.post("/rodar")
 async def rodar_importacao(payload: ImportacaoPayload):
@@ -63,3 +64,13 @@ async def rodar_importacao(payload: ImportacaoPayload):
 
     except subprocess.CalledProcessError as e:
         raise HTTPException(status_code=500, detail=f"Erro ao rodar importação: {str(e)}")
+
+
+# (Opcional extra) GET - Resumo por ano/camada/status
+@router.get("/resumo")
+async def resumo_importacoes(db: AsyncSession = Depends(get_session)):
+    query = text("""
+        SELECT * FROM intel_lead.vw_import_status_resumido
+    """)
+    res = await db.execute(query)
+    return [dict(row) for row in res.fetchall()]
