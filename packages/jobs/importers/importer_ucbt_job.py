@@ -79,10 +79,10 @@ def importar_ucbt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
             copy_to_table(conn, df_qualidade, "lead_qualidade_mensal")
 
         registrar_status(prefixo, ano, camada, "completed")
-        tqdm.write("🎉 Importação UCBT finalizada com sucesso!")
+        tqdm.write(" Importação UCBT finalizada com sucesso!")
 
     except Exception as e:
-        tqdm.write(f"❌ Erro ao importar UCBT: {e}")
+        tqdm.write(f" Erro ao importar UCBT: {e}")
         registrar_status(prefixo, ano, camada, "failed", erro=str(e))
         if modo_debug:
             raise
