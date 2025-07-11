@@ -45,7 +45,7 @@ def importar_ucat(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
         campos_energia = []
         for mes in range(1, 13):
             campos_energia.append([
-                "COD_ID", mes,  # identificador e mês (manual)
+                "COD_ID", mes,
                 f"ENE_P_{mes:02d}",
                 f"ENE_F_{mes:02d}",
                 None  # total será calculado
@@ -92,9 +92,9 @@ def importar_ucat(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
         df_demanda = df_demanda.merge(df_ids, on="uc_id").drop(columns=["uc_id"])
 
         with get_db_connection() as conn:
-            copy_to_table(conn, "lead_energia_mensal", df_energia)
-            copy_to_table(conn, "lead_qualidade_mensal", df_qualidade)
-            copy_to_table(conn, "lead_demanda_mensal", df_demanda)
+            copy_to_table(conn, df_energia, "lead_energia_mensal")
+            copy_to_table(conn, df_qualidade, "lead_qualidade_mensal")
+            copy_to_table(conn, df_demanda, "lead_demanda_mensal")
 
         registrar_status(prefixo, ano, camada, "completed")
         tqdm.write("🎉 Importação UCAT finalizada com sucesso!")

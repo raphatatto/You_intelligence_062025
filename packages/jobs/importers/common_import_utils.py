@@ -121,7 +121,7 @@ def normalizar_dataframe_para_tabelas(
     df_energia["origem"] = camada
 
     df_qualidade = gdf[campos_qualidade].copy()
-    df_qualidade.columns = ["uc_id", "mes", "dic", "fic", "semrede"]
+    df_qualidade.columns = ["uc_id", "mes", "dic", "fic", "sem_rede"]
     df_qualidade["import_id"] = import_id
     df_qualidade["origem"] = camada
 

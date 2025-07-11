@@ -2,13 +2,13 @@ import os
 import sys
 from pathlib import Path
 from tqdm import tqdm
+from subprocess import run
 
 # Corrige o path base do projeto
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from subprocess import run
 from packages.jobs.utils.rastreio import get_status
 
 # Caminho para a pasta onde estão os .gdb
@@ -38,16 +38,22 @@ def rodar_importer(script_path: str, gdb_path: Path, camada: str, distribuidora:
         return
 
     tqdm.write(f"⚙️  Importando {camada} para {prefixo}")
-    run([
+    result = run([
         PYTHON_EXEC, script_path,
         "--gdb", str(gdb_path),
         "--ano", str(ano),
         "--distribuidora", distribuidora,
-        "--prefixo", prefixo
+        "--prefixo", prefixo,
+        "--modo_debug"
     ],
-    check=False,
-    env={**os.environ, "PYTHONPATH": str(ROOT)}  # <- IMPORTANTE
-)
+    capture_output=True,
+    text=True,
+    env={**os.environ, "PYTHONPATH": str(ROOT)})
+
+    if result.returncode != 0:
+        tqdm.write(f"❌ Erro na importação de {camada} ({prefixo}):\n{result.stderr}")
+    else:
+        tqdm.write(f"✅ {camada} {prefixo} importado com sucesso.")
 
 def main():
     tqdm.write("📁 Iniciando orquestrador manual (mock)")

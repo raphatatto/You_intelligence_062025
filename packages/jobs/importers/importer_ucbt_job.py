@@ -42,7 +42,7 @@ def importar_ucbt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
 
         tqdm.write("🧱️ Transformando UCBT para tabelas normalizadas...")
 
-        # Campos simplificados (valores únicos por mês, sem ponta/fora ponta separados)
+        # Campos simplificados para UCBT (sem ponta/fora ponta separada)
         campos_energia = [
             ["COD_ID", mes, f"ENE_{mes:02d}", None, None] for mes in range(1, 13)
         ]
@@ -86,7 +86,6 @@ def importar_ucbt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
         registrar_status(prefixo, ano, camada, "failed", erro=str(e))
         if modo_debug:
             raise
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
