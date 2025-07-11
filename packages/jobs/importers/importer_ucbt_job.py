@@ -24,7 +24,7 @@ def importar_ucbt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
         if not layer:
             raise Exception("Camada UCBT não encontrada no GDB.")
 
-        tqdm.write(f"📖 Lendo camada '{layer}'...")
+        tqdm.write(f" Lendo camada '{layer}'...")
         gdf = gpd.read_file(str(gdb_path), layer=layer)
 
         if len(gdf) == 0:
@@ -40,7 +40,7 @@ def importar_ucbt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
             raise ValueError(f"Esperado um único código de distribuidora, mas encontrei: {dist_id}")
         dist_id = int(dist_id[0])
 
-        tqdm.write("🧱️ Transformando UCBT para tabelas normalizadas...")
+        tqdm.write(" Transformando UCBT para tabelas normalizadas...")
 
         # Campos simplificados para UCBT (sem ponta/fora ponta separada)
         campos_energia = [
