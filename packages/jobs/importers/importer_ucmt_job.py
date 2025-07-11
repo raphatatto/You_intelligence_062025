@@ -40,7 +40,7 @@ def importar_ucmt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
             raise ValueError(f"Esperado um único código de distribuidora, mas encontrei: {dist_id}")
         dist_id = int(dist_id[0])
 
-        tqdm.write("🧱️ Transformando UCMT para tabelas normalizadas...")
+        tqdm.write(" Transformando UCMT para tabelas normalizadas...")
 
         campos_energia = [
             ["COD_ID", mes, f"ENE_{mes:02d}", None, None]
@@ -83,10 +83,10 @@ def importar_ucmt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
             copy_to_table(conn, df_demanda, "lead_demanda_mensal")
 
         registrar_status(prefixo, ano, camada, "completed")
-        tqdm.write("🎉 Importação UCMT finalizada com sucesso!")
+        tqdm.write(" Importação UCMT finalizada com sucesso!")
 
     except Exception as e:
-        tqdm.write(f"❌ Erro ao importar UCMT: {e}")
+        tqdm.write(f" Erro ao importar UCMT: {e}")
         registrar_status(prefixo, ano, camada, "failed", erro=str(e))
         if modo_debug:
             raise

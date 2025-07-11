@@ -25,7 +25,7 @@ def importar_ucat(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
         if not layer:
             raise Exception("Camada UCAT não encontrada no GDB.")
 
-        tqdm.write(f"📖 Lendo camada '{layer}'...")
+        tqdm.write(f" Lendo camada '{layer}'...")
         gdf = gpd.read_file(str(gdb_path), layer=layer)
 
         if len(gdf) == 0:
@@ -70,7 +70,7 @@ def importar_ucat(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
                 None  # total será calculado
             ])
 
-        tqdm.write("🧱 Transformando UCAT para tabelas normalizadas...")
+        tqdm.write(" Transformando UCAT para tabelas normalizadas...")
         df_bruto, df_energia, df_qualidade, df_demanda = normalizar_dataframe_para_tabelas(
             gdf, ano, camada, dist_id, import_id,
             campos_energia=campos_energia,
@@ -97,10 +97,10 @@ def importar_ucat(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
             copy_to_table(conn, df_demanda, "lead_demanda_mensal")
 
         registrar_status(prefixo, ano, camada, "completed")
-        tqdm.write("🎉 Importação UCAT finalizada com sucesso!")
+        tqdm.write(" Importação UCAT finalizada com sucesso!")
 
     except Exception as e:
-        tqdm.write(f"❌ Erro ao importar UCAT: {e}")
+        tqdm.write(f" Erro ao importar UCAT: {e}")
         registrar_status(prefixo, ano, camada, "failed", erro=str(e))
         if modo_debug:
             raise
