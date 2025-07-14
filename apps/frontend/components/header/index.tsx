@@ -33,16 +33,16 @@ const menuItems = [
 
 export default function Header(){
 return (
-    <header>
-        <GridContainer>
-          <div>
+    <header className="sticky top-0 w-full h-[80px] bg-gray-950 border-b border-b-gray-800 flex items-center">
+        <GridContainer className="flex items-center justify-between">
+          <div className="flex items-center gap-10">
             <Image
                 src="/icone-verde.png"
                 alt="logo"
                 width={30}
                 height={15}
             />
-            <nav>
+            <nav className="flex items-center gap-8">
                 {menuItems.map(({ url, title, dropdown }, index) => (
                     <ItemMenu
                         key={index}
@@ -52,6 +52,14 @@ return (
                     />
                 ))}
             </nav>
+          </div>
+          <div>
+            <Image
+                src="/icone-verde.png"
+                alt="logo"
+                width={15}
+                height={15}
+            />
           </div>
         </GridContainer>
     </header>
