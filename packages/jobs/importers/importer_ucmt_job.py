@@ -15,7 +15,7 @@ from packages.jobs.importers.common_import_utils import (
 )
 
 def importar_ucmt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, modo_debug: bool = False):
-    camada = "UCMT"
+    camada = "UCMT_tab"
     registrar_status(prefixo, ano, camada, status="running")
     import_id = gerar_import_id(prefixo, ano, camada)
 
