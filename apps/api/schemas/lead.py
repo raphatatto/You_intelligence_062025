@@ -77,3 +77,50 @@ class ImportStatusOut(BaseModel):
     camada: str
     status: str
     data_execucao: datetime
+
+
+from pydantic import BaseModel
+from typing import Optional
+from datetime import datetime
+
+from pydantic import BaseModel
+from typing import Optional
+from datetime import date
+from decimal import Decimal
+
+class LeadDetalhado(BaseModel):
+    uc_id: str
+    import_id: Optional[str]
+    cod_id: Optional[str]
+    ano: Optional[int]
+    origem: Optional[str]
+    status: Optional[str]
+    latitude_final: Optional[float]
+    longitude_final: Optional[float]
+    cep: Optional[str]
+    bairro: Optional[str]
+    municipio_nome: Optional[str]
+    municipio_uf: Optional[str] 
+    pac: Optional[int]           
+    descricao: Optional[str]
+    data_conexao: Optional[date]
+    subestacao: Optional[str]
+    pn_con: Optional[str]
+    classe_desc: Optional[str]
+    grupo_tensao_desc: Optional[str]
+    modalidade_desc: Optional[str]
+    tipo_sistema_desc: Optional[str]
+    situacao_desc: Optional[str]
+    cnae: Optional[str]
+    cnae_desc: Optional[str]
+    segmento_desc: Optional[str]
+    enriquecimento_status: Optional[str]
+    enriquecimento_em: Optional[str]  # <== nome correto conforme dicionário
+    enriquecimento_etapa: Optional[str]
+    media_energia_total: Optional[Decimal]
+    total_energia_total: Optional[Decimal]
+    media_demanda_total: Optional[Decimal]
+    total_demanda_total: Optional[Decimal]
+    media_dic: Optional[Decimal]
+    media_fic: Optional[Decimal]
+    total_horas_sem_rede: Optional[Decimal]

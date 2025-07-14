@@ -4,18 +4,19 @@ from fastapi.middleware.cors import CORSMiddleware
 from apps.api.services.config import get_settings
 from apps.api.routes.health import router as health_router
 from apps.api.routes.leads import router as leads_router
-from apps.api.services.config import get_settings
 
 # NOVAS ROTAS DO ADMIN
 from apps.api.routes.admin import (
     dashboard as admin_dashboard_router,
     importacoes as admin_importacoes_router,
     leads as admin_leads_router,
-    enrich as admin_enrich_router
+    enrich as admin_enrich_router,
 )
 
+# Configurações globais
 settings = get_settings()
 
+# Inicializa o app com nome e versão vindos do .env
 app = FastAPI(
     title=settings.api_name,
     version=settings.api_version,
@@ -23,10 +24,10 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
-# CORS
+# CORS liberado (ajuste para produção!)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # <-- libere domínios específicos em produção
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
