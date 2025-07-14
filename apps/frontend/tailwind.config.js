@@ -10,7 +10,11 @@ module.exports = {
   "./apps/frontend/components/**/*.{js,ts,jsx,tsx}",
 ],
   theme: {
-    extend: {},
+    extend: {
+      maxWidth:{
+        'container': '77.5rem'
+      }
+    },
   },
   plugins: [],
 };
