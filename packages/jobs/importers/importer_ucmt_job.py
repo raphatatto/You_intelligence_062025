@@ -103,3 +103,5 @@ if __name__ == "__main__":
         prefixo=args.prefixo,
         modo_debug=args.modo_debug
     )
+
+ 

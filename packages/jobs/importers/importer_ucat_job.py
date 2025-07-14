@@ -16,7 +16,7 @@ from packages.jobs.importers.common_import_utils import (
 )
 
 def importar_ucat(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, modo_debug: bool = False):
-    camada = "UCAT_tab"
+    camada = "UCAT"
     registrar_status(prefixo, ano, camada, status="running")
     import_id = gerar_import_id(prefixo, ano, camada)
 
