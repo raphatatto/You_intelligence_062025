@@ -10,14 +10,17 @@ import {
   MapPinned,
   BarChart2,
   MapIcon,
+  TextSearchIcon,
+  LayoutDashboard,
 } from 'lucide-react';
 
 const links = [
-  { href: '/',        label: 'Home',             icon: Home },
-  //{ href: '/dashboard',label: 'Dashboard',       icon: LayoutDashboard },
+  { href: '/', label: 'Home', icon: Home },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/mapa',    label: 'Mapa interativo',  icon: MapPinned },
   { href: '/leads',   label: 'Dados',            icon: BarChart2 },
-   { href: '/mapaHeat', label: 'Mapa de calor',  icon: MapIcon },
+  { href: '/mapaHeat', label: 'Mapa de calor',  icon: MapIcon },
+  { href: '/teste', label: 'Mapa de calor',  icon: TextSearchIcon },
 
   //{ href: '/noticias',label: 'Notícias',         icon: Newspaper },
 ];
