@@ -1,8 +1,17 @@
-# packages/jobs/utils/sanitizadores.py
-
 import pandas as pd
 import numpy as np
 import re
+
+def safe_series_sanitizer(fn):
+    def wrapper(serie):
+        if isinstance(serie, pd.Series):
+            return fn(serie)
+        try:
+            return fn(pd.Series([serie])).iloc[0]
+        except:
+            return None
+    return wrapper
+
 
 def sanitize_numeric(serie, errors="coerce"):
     """
@@ -38,6 +47,20 @@ def sanitize_numeric(serie, errors="coerce"):
             return np.nan
 
 
+@safe_series_sanitizer
+def sanitize_str(serie):
+    """
+    Remove caracteres de controle e espaços desnecessários.
+    """
+    return (
+        serie
+        .astype(str)
+        .str.replace(r"[\r\n\t]+", " ", regex=True)
+        .str.strip()
+    )
+
+
+@safe_series_sanitizer
 def sanitize_cnae(serie):
     """
     Remove traços, barras e converte CNAE para inteiro, quando possível.
@@ -51,6 +74,7 @@ def sanitize_cnae(serie):
     )
 
 
+@safe_series_sanitizer
 def sanitize_int(serie):
     """
     Remove tudo que não for número e converte para Int64.
@@ -64,64 +88,29 @@ def sanitize_int(serie):
     )
 
 
-def sanitize_str(serie):
-
-
-    """
-    Remove caracteres de controle e espaços desnecessários.
-    """
-    return (
-        serie
-        .astype(str)
-        .str.replace(r"[\r\n\t]+", " ", regex=True)
-        .str.strip()
-    )
-
-
 def sanitize_grupo_tensao(val: str | None) -> str | None:
     if not val:
         return None
     val = str(val).strip().upper()
     mapa = {
-        "AT": "AT4",
-        "AT4": "AT4",
-        "AT3": "AT3",
-        "AT2": "AT2",
-        "MT": "MT3",
-        "MT3": "MT3",
-        "MT2": "MT2",
-        "MT1": "MT1",
-        "BT": "BT2",
-        "BT2": "BT2",
-        "BT1": "BT1",
+        "AT": "AT4", "AT4": "AT4", "AT3": "AT3", "AT2": "AT2",
+        "MT": "MT3", "MT3": "MT3", "MT2": "MT2", "MT1": "MT1",
+        "BT": "BT2", "BT2": "BT2", "BT1": "BT1",
     }
     return mapa.get(val, val)
+
 
 def sanitize_modalidade(val: str | None) -> str | None:
     if not val:
         return None
     val = str(val).strip().upper()
-
-    # Captura apenas o código tarifário padrão, removendo qualquer sufixo (B2Ru → B2, A3aRe → A3A)
     base_match = re.match(r"^(A1|A2|A3A|A3|A4|AS|B1|B2|B3|B4)", val)
     if base_match:
         val = base_match.group(0)
-
     mapa = {
-        "CONVENCIONAL": "Convencional",
-        "AZUL": "Azul",
-        "VERDE": "Verde",
-        "BRANCA": "Branca",
-        "B1": "B1",
-        "B2": "B2",
-        "B3": "B3",
-        "B4": "B4",
-        "A1": "A1",
-        "A2": "A2",
-        "A3": "A3",
-        "A3A": "A3a",
-        "A4": "A4",
-        "AS": "AS"
+        "CONVENCIONAL": "Convencional", "AZUL": "Azul", "VERDE": "Verde", "BRANCA": "Branca",
+        "B1": "B1", "B2": "B2", "B3": "B3", "B4": "B4",
+        "A1": "A1", "A2": "A2", "A3": "A3", "A3A": "A3a", "A4": "A4", "AS": "AS"
     }
     return mapa.get(val, val.title())
 
@@ -131,48 +120,33 @@ def sanitize_tipo_sistema(val: str | None) -> str | None:
         return None
     val = str(val).strip().upper()
     mapa = {
-        "TRIFÁSICO": "Trifásico",
-        "BIFÁSICO": "Bifásico",
-        "MONOFÁSICO": "Monofásico",
-        "TRIFASICO": "Trifásico",
-        "BIFASICO": "Bifásico",
-        "MONOFASICO": "Monofásico",
-        "RD_INTERLIG": "RD_INTERLIG",
-        "RD_ISOLADA": "RD_ISOLADA",
-        "GER_LOCAL": "GER_LOCAL",
-        "NA": "NA"
+        "TRIFÁSICO": "Trifásico", "BIFÁSICO": "Bifásico", "MONOFÁSICO": "Monofásico",
+        "TRIFASICO": "Trifásico", "BIFASICO": "Bifásico", "MONOFASICO": "Monofásico",
+        "RD_INTERLIG": "RD_INTERLIG", "RD_ISOLADA": "RD_ISOLADA",
+        "GER_LOCAL": "GER_LOCAL", "NA": "NA"
     }
     return mapa.get(val, val)
+
 
 def sanitize_situacao(val: str | None) -> str | None:
     if not val:
         return None
     val = str(val).strip().upper()
     mapa = {
-        "AT": "ATIVA",
-        "IN": "INATIVA",
-        "CO": "CORTADA",
-        "SU": "SUPRIMIDA",
-        "EM": "EM_IMPLANTAÇÃO",
-        "DE": "DESATIVADA",
-        "DS": "DESATIVADA",
+        "AT": "ATIVA", "IN": "INATIVA", "CO": "CORTADA", "SU": "SUPRIMIDA",
+        "EM": "EM_IMPLANTAÇÃO", "DE": "DESATIVADA", "DS": "DESATIVADA",
         "IM": "EM_IMPLANTAÇÃO",
-        "ATIVA": "ATIVA",
-        "INATIVA": "INATIVA",
-        "CORTADA": "CORTADA",
-        "SUPRIMIDA": "SUPRIMIDA",
-        "EM_IMPLANTAÇÃO": "EM_IMPLANTAÇÃO",
-        "DESATIVADA": "DESATIVADA"
+        "ATIVA": "ATIVA", "INATIVA": "INATIVA", "CORTADA": "CORTADA",
+        "SUPRIMIDA": "SUPRIMIDA", "EM_IMPLANTAÇÃO": "EM_IMPLANTAÇÃO", "DESATIVADA": "DESATIVADA"
     }
     return mapa.get(val, val)
+
 
 def sanitize_classe(val: str | None) -> str | None:
     if not val:
         return None
-
     val = str(val).strip().upper()
 
-    # ⚠️ Casos conhecidos com siglas específicas que não seguem padrão
     if val in ["CSPS", "RUB", "CPR", "CPRVE", "CPRSP", "CPRVC", "CPRAC", "CPRS", "CP", "COM", "COMERCIAL_1"]:
         return "COMERCIAL"
     if val in ["RE_BPC", "RE_BEN", "REKQ", "REIND", "RE", "RE1", "RE2", "RE3"]:
@@ -190,7 +164,6 @@ def sanitize_classe(val: str | None) -> str | None:
     if val in ["CPRO", "AUTO", "CONSUMO_PROPRIO", "GERACAO"]:
         return "CONSUMO_PRÓPRIO"
 
-    # Tentativa de normalização com prefixos genéricos
     base = ''.join([c for c in val if not c.isdigit()])
 
     if base.startswith("RE"):
@@ -208,8 +181,8 @@ def sanitize_classe(val: str | None) -> str | None:
     if base.startswith("SP") or base.startswith("CS"):
         return "SERVIÇO_PÚBLICO"
 
-    # Último fallback: retorna como está
     return base
+
 
 def sanitize_pac(value):
     try:
