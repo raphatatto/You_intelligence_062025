@@ -14,4 +14,11 @@ export type Lead = {
   longitude: number
   latitude: number
   tipo: string
+  segmento_desc:string
+  municipio_nome:string
+  municipio_uf:string
+  classe_desc:string
+  origem:string
+  media_dic:number
+  media_fic:number
 }
