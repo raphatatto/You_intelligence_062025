@@ -15,8 +15,8 @@ from packages.jobs.importers.common_import_utils import (
 )
 
 def importar_ucbt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, modo_debug: bool = False):
-    camada = "UCBT_tab"
-    registrar_status(prefixo, ano, camada, status="running")
+    camada = "UCBT"  # Usado para status no banco
+    registrar_status(prefixo, ano, camada, "running")
     import_id = gerar_import_id(prefixo, ano, camada)
 
     try:
@@ -24,38 +24,42 @@ def importar_ucbt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
         if not layer:
             raise Exception("Camada UCBT não encontrada no GDB.")
 
-        tqdm.write(f" Lendo camada '{layer}'...")
+        tqdm.write(f"Lendo camada real '{layer}'...")
         gdf = gpd.read_file(str(gdb_path), layer=layer)
 
         if len(gdf) == 0:
-            registrar_status(prefixo, ano, camada, status="no_new_rows", linhas_processadas=0)
+            registrar_status(prefixo, ano, camada, "no_new_rows")
             return
 
         gdf.replace(["None", "nan", "", "***", "-"], pd.NA, inplace=True)
         gdf = gdf.fillna(value=pd.NA)
-        sujas = gdf.columns[gdf.astype(str).apply(lambda col: col.str.contains("106022|YEL", na=False)).any()]
-        gdf.drop(columns=sujas, inplace=True)
+
+        colunas_sujas = gdf.columns[gdf.astype(str).apply(lambda col: col.str.contains("106022|YEL", na=False)).any()]
+        gdf.drop(columns=colunas_sujas, inplace=True)
 
         dist_id_series = sanitize_int(gdf["DIST"]).dropna().astype(int).unique()
         if len(dist_id_series) != 1:
             raise ValueError(f"Esperado um único código de distribuidora, mas encontrei: {dist_id_series}")
         dist_id = dist_id_series[0]
 
-        tqdm.write(" Montando campos mensais...")
+        tqdm.write("Montando campos mensais...")
+
         campos_energia = [
             ["COD_ID", mes, f"ENE_{mes:02d}", None, None]
             for mes in range(1, 13)
         ]
+
         campos_demanda = [
             ["COD_ID", mes, f"DEM_{mes:02d}", f"DEM_{mes:02d}", None, f"DEM_{mes:02d}"]
             for mes in range(1, 13)
         ]
+
         campos_qualidade = [
             ["COD_ID", mes, f"DIC_{mes:02d}", f"FIC_{mes:02d}"]
             for mes in range(1, 13)
         ]
 
-        tqdm.write(" Transformando UCBT para tabelas normalizadas...")
+        tqdm.write("Transformando UCBT para tabelas normalizadas...")
         df_bruto, df_energia, df_qualidade, df_demanda = normalizar_dataframe_para_tabelas(
             gdf, ano, camada, dist_id, import_id,
             campos_energia=campos_energia,
@@ -65,10 +69,12 @@ def importar_ucbt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
 
         with get_db_connection() as conn:
             copy_to_table(conn, df_bruto, "lead_bruto")
+
             df_ids = pd.read_sql(
                 "SELECT id AS lead_bruto_id, uc_id FROM lead_bruto WHERE import_id = %s",
                 conn, params=(import_id,)
             )
+
             df_energia = df_energia.merge(df_ids, on="uc_id").drop(columns=["uc_id"])
             df_qualidade = df_qualidade.merge(df_ids, on="uc_id").drop(columns=["uc_id"])
             df_demanda = df_demanda.merge(df_ids, on="uc_id").drop(columns=["uc_id"])
@@ -77,12 +83,12 @@ def importar_ucbt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
             copy_to_table(conn, df_qualidade, "lead_qualidade_mensal")
             copy_to_table(conn, df_demanda, "lead_demanda_mensal")
 
-        registrar_status(prefixo, ano, camada, status="completed", distribuidora_id=dist_id, linhas_processadas=len(df_bruto))
-        tqdm.write(" Importação UCBT finalizada com sucesso!")
+        registrar_status(prefixo, ano, camada, "completed")
+        tqdm.write("Importação UCBT finalizada com sucesso!")
 
     except Exception as e:
-        registrar_status(prefixo, ano, camada, status="failed", erro=str(e))
-        tqdm.write(f" Erro ao importar UCBT: {e}")
+        tqdm.write(f"Erro ao importar UCBT: {e}")
+        registrar_status(prefixo, ano, camada, "failed", erro=str(e))
         if modo_debug:
             raise
 
