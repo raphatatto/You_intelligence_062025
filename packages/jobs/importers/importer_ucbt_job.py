@@ -27,6 +27,9 @@ def importar_ucbt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
         tqdm.write(f"Lendo camada real '{layer}'...")
         gdf = gpd.read_file(str(gdb_path), layer=layer)
 
+        # ⚠️ Normalizar colunas para evitar erros com capitalização
+        gdf.columns = [col.upper() for col in gdf.columns]
+
         if len(gdf) == 0:
             registrar_status(prefixo, ano, camada, "no_new_rows")
             return
