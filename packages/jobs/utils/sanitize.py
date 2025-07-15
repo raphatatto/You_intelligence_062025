@@ -183,10 +183,10 @@ def sanitize_classe(val: str | None) -> str | None:
 
     return base
 
-
-def sanitize_pac(value):
-    try:
-        val = float(value)
-        return int(val) if 0 < val < 1_000_000 else None  # aceita até 1 MW
-    except:
-        return None
+@safe_series_sanitizer
+def sanitize_pac(serie):
+    return (
+        pd.to_numeric(serie, errors="coerce")
+        .apply(lambda x: int(x) if pd.notnull(x) and 0 < x < 1_000_000 else None)
+        .astype("Int64")
+    )

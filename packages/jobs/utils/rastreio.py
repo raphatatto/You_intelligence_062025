@@ -15,6 +15,7 @@ def registrar_status(
     status: str,
     erro: str = None,
     distribuidora_id: int = None,
+    distribuidora_nome: str = None,
     linhas_processadas: int = None,
     observacoes: str = None,
     import_id: str = None,
@@ -22,7 +23,7 @@ def registrar_status(
     """
     Registra ou atualiza o status da importação no schema intel_lead.
     Preenche data_inicio quando status = running.
-    Preenche data_fim e linhas_processadas quando status = completed/failed/no_new_rows.
+    Preenche data_fim, erro, observacoes e linhas_processadas quando status = completed/failed/no_new_rows.
     """
     import_id = import_id or gerar_import_id(prefixo, ano, camada)
 
@@ -30,12 +31,23 @@ def registrar_status(
         if status == "running":
             cur.execute("""
                 INSERT INTO import_status (
-                    import_id, distribuidora_id, ano, camada, status, data_inicio
-                ) VALUES (%s, %s, %s, %s, %s, NOW())
+                    import_id, distribuidora_id, distribuidora_nome,
+                    ano, camada, status, data_inicio
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, NOW())
                 ON CONFLICT (import_id) DO UPDATE SET
                     status = EXCLUDED.status,
-                    data_inicio = NOW()
-            """, (import_id, distribuidora_id, ano, camada, status))
+                    data_inicio = NOW(),
+                    distribuidora_id = EXCLUDED.distribuidora_id,
+                    distribuidora_nome = EXCLUDED.distribuidora_nome
+            """, (
+                import_id,
+                distribuidora_id,
+                distribuidora_nome,
+                ano,
+                camada,
+                status
+            ))
 
         elif status in ["completed", "failed", "no_new_rows"]:
             cur.execute("""
@@ -46,7 +58,13 @@ def registrar_status(
                     observacoes = %s,
                     data_fim = NOW()
                 WHERE import_id = %s
-            """, (status, erro, linhas_processadas, observacoes, import_id))
+            """, (
+                status,
+                erro,
+                linhas_processadas,
+                observacoes,
+                import_id
+            ))
 
 def get_status(prefixo: str, ano: int, camada: str) -> str:
     """
