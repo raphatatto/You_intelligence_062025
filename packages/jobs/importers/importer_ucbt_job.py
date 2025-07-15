@@ -48,6 +48,7 @@ def importar_ucbt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
     registrar_status(prefixo, ano, camada, "running", distribuidora_nome=distribuidora)
 
     try:
+<<<<<<< HEAD
         layer = detectar_layer(gdb_path)
         if not layer:
             raise Exception("Camada UCBT não encontrada no GDB.")
@@ -55,6 +56,23 @@ def importar_ucbt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
         tqdm.write(f" Lendo camada '{layer}'...")
         gdf = gpd.read_file(str(gdb_path), layer=layer)
 
+=======
+        tqdm.write(" Verificando camadas no GDB...")
+        layer = detectar_layer(gdb_path, camada)
+        if not layer:
+            raise Exception("Camada UCBT não encontrada no GDB.")
+
+        tqdm.write(f" Lendo camada real '{layer}'...")
+        gdf = gpd.read_file(str(gdb_path), layer=layer)
+
+        #  Normalizar colunas para evitar erros com capitalização e espaços
+        gdf.columns = [col.strip().upper() for col in gdf.columns]
+        tqdm.write(f" Colunas disponíveis: {list(gdf.columns)}")
+
+        if "COD_ID" not in gdf.columns:
+            raise KeyError(" A coluna 'COD_ID' não foi encontrada no DataFrame após leitura do GDB.")
+
+>>>>>>> 56e553dd86508d8dc28552b23dc773f6d22225a1
         if len(gdf) == 0:
             registrar_status(prefixo, ano, camada, "no_new_rows", import_id=import_id)
             return
@@ -67,10 +85,14 @@ def importar_ucbt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
 
         tqdm.write(" Transformando UCBT para lead_bruto...")
 
+<<<<<<< HEAD
         dist_id = sanitize_int(gdf["DIST"]).dropna().unique()
         if len(dist_id) != 1:
             raise ValueError(f"Esperado um único código de distribuidora, mas encontrei: {dist_id}")
         dist_id = int(dist_id[0])
+=======
+        tqdm.write(" Montando campos mensais...")
+>>>>>>> 56e553dd86508d8dc28552b23dc773f6d22225a1
 
         df_bruto = pd.DataFrame({
             "uc_id": [
@@ -108,6 +130,7 @@ def importar_ucbt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
         df_bruto = df_bruto[df_bruto["uc_id"].notnull()].reset_index(drop=True)
         gdf = gdf.loc[df_bruto.index].reset_index(drop=True)
 
+<<<<<<< HEAD
         tqdm.write(" Transformando UCBT para lead_energia_mensal...")
         energia_df = []
         for mes in range(1, 13):
@@ -138,6 +161,15 @@ def importar_ucbt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
                 "origem": camada
             }))
         df_qualidade = pd.concat(qualidade_df).reset_index(drop=True)
+=======
+        tqdm.write(" Transformando UCBT para tabelas normalizadas...")
+        df_bruto, df_energia, df_qualidade, df_demanda = normalizar_dataframe_para_tabelas(
+            gdf, ano, camada, dist_id, import_id,
+            campos_energia=campos_energia,
+            campos_qualidade=campos_qualidade,
+            campos_demanda=campos_demanda
+        )
+>>>>>>> 56e553dd86508d8dc28552b23dc773f6d22225a1
 
         with get_db_connection() as conn:
             with conn.cursor() as cur:
@@ -160,20 +192,28 @@ def importar_ucbt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
                 insert_copy(cur, df_qualidade, "lead_qualidade_mensal", df_qualidade.columns.tolist())
             conn.commit()
 
+<<<<<<< HEAD
         registrar_status(
             prefixo, ano, camada, "completed",
             linhas_processadas=len(df_bruto),
             import_id=import_id
         )
+=======
+        registrar_status(prefixo, ano, camada, "completed")
+>>>>>>> 56e553dd86508d8dc28552b23dc773f6d22225a1
         tqdm.write(" Importação UCBT finalizada com sucesso!")
 
     except Exception as e:
         tqdm.write(f" Erro ao importar UCBT: {e}")
+<<<<<<< HEAD
         registrar_status(
             prefixo, ano, camada, "failed",
             erro=str(e),
             import_id=import_id
         )
+=======
+        registrar_status(prefixo, ano, camada, "failed", erro=str(e))
+>>>>>>> 56e553dd86508d8dc28552b23dc773f6d22225a1
         if modo_debug:
             raise
 
