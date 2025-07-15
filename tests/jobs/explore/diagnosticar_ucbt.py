@@ -1,4 +1,5 @@
-# PS C:\Users\GuilhermeCostaProenç\OneDrive - You On\Área de Trabalho\You_intelligence_062025> python tests/jobs/explore/diagnosticar_ucbt.py "data/downloads/CPFL_Paulista_2023.gdb"
+# PS C:\Users\GuilhermeCostaProenç\OneDrive - You On\Área de Trabalho\You_intelligence_062025> 
+
 
 import sys
 import geopandas as gpd

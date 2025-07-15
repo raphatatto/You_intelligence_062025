@@ -77,7 +77,7 @@ def main():
             try:
                 rodar_importer(script, gdb_dir, camada, distribuidora, ano, prefixo)
             except Exception as e:
-                tqdm.write(f"❌ Erro ao rodar {camada} ({prefixo}): {e}")
+                tqdm.write(f" Erro ao rodar {camada} ({prefixo}): {e}")
                 continue
 
     tqdm.write("🏁 Orquestração mock finalizada.")

@@ -20,20 +20,20 @@ def importar_ucbt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
     import_id = gerar_import_id(prefixo, ano, camada)
 
     try:
-        tqdm.write("🔍 Verificando camadas no GDB...")
+        tqdm.write(" Verificando camadas no GDB...")
         layer = detectar_layer(gdb_path, camada)
         if not layer:
             raise Exception("Camada UCBT não encontrada no GDB.")
 
-        tqdm.write(f"📖 Lendo camada real '{layer}'...")
+        tqdm.write(f" Lendo camada real '{layer}'...")
         gdf = gpd.read_file(str(gdb_path), layer=layer)
 
-        # ⚠️ Normalizar colunas para evitar erros com capitalização e espaços
+        #  Normalizar colunas para evitar erros com capitalização e espaços
         gdf.columns = [col.strip().upper() for col in gdf.columns]
-        tqdm.write(f"📋 Colunas disponíveis: {list(gdf.columns)}")
+        tqdm.write(f" Colunas disponíveis: {list(gdf.columns)}")
 
         if "COD_ID" not in gdf.columns:
-            raise KeyError("❌ A coluna 'COD_ID' não foi encontrada no DataFrame após leitura do GDB.")
+            raise KeyError(" A coluna 'COD_ID' não foi encontrada no DataFrame após leitura do GDB.")
 
         if len(gdf) == 0:
             registrar_status(prefixo, ano, camada, "no_new_rows")
@@ -50,7 +50,7 @@ def importar_ucbt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
             raise ValueError(f"Esperado um único código de distribuidora, mas encontrei: {dist_id_series}")
         dist_id = dist_id_series[0]
 
-        tqdm.write("🧱️ Montando campos mensais...")
+        tqdm.write(" Montando campos mensais...")
 
         campos_energia = [
             ["COD_ID", mes, f"ENE_{mes:02d}", None, None]
@@ -67,7 +67,7 @@ def importar_ucbt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
             for mes in range(1, 13)
         ]
 
-        tqdm.write("🔄 Transformando UCBT para tabelas normalizadas...")
+        tqdm.write(" Transformando UCBT para tabelas normalizadas...")
         df_bruto, df_energia, df_qualidade, df_demanda = normalizar_dataframe_para_tabelas(
             gdf, ano, camada, dist_id, import_id,
             campos_energia=campos_energia,
@@ -92,10 +92,10 @@ def importar_ucbt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
             copy_to_table(conn, df_demanda, "lead_demanda_mensal")
 
         registrar_status(prefixo, ano, camada, "completed")
-        tqdm.write("✅ Importação UCBT finalizada com sucesso!")
+        tqdm.write(" Importação UCBT finalizada com sucesso!")
 
     except Exception as e:
-        tqdm.write(f"❌ Erro ao importar UCBT: {e}")
+        tqdm.write(f" Erro ao importar UCBT: {e}")
         registrar_status(prefixo, ano, camada, "failed", erro=str(e))
         if modo_debug:
             raise
