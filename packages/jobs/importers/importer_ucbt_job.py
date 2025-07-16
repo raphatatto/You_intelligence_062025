@@ -44,7 +44,7 @@ def importar_ucbt_fiona(gdb_path: Path, distribuidora: str, ano: int, prefixo: s
     registrar_status(prefixo, ano, camada, "running", distribuidora_nome=distribuidora)
 
     try:
-        tqdm.write(" Abrindo camada 'UCBT_tab' com Fiona...")
+        tqdm.write("🔍 Abrindo camada 'UCBT_tab' com Fiona...")
         with fiona.open(str(gdb_path), layer="UCBT_tab") as src:
             dist_id = None
             chunk_size = 100_000
@@ -125,10 +125,16 @@ def processar_chunk(chunk_data, cur, import_id, ano, camada, dist_id, all_uc_ids
     df["descricao"] = sanitize_str(df["DESCR"])
 
     df.drop_duplicates(subset="uc_id", inplace=True)
-    if "DIST" in df.columns:
-        df.drop(columns=["DIST"], inplace=True)
 
-    insert_copy(cur, df, "lead_bruto", df.columns.tolist())
+    colunas_validas = [
+        "uc_id", "import_id", "distribuidora_id", "origem", "ano", "status",
+        "data_conexao", "cnae", "grupo_tensao", "modalidade", "tipo_sistema", "situacao",
+        "classe", "segmento", "subestacao", "municipio_id", "bairro", "cep", "pac",
+        "pn_con", "descricao"
+    ]
+    df = df[colunas_validas]
+
+    insert_copy(cur, df, "lead_bruto", colunas_validas)
 
     return len(df)
 
