@@ -5,7 +5,7 @@ import argparse
 import pandas as pd
 from pathlib import Path
 from tqdm import tqdm
-from subprocess import run
+import fiona
 
 from packages.database.connection import get_db_connection
 from packages.jobs.utils.rastreio import registrar_status, gerar_import_id
@@ -38,131 +38,139 @@ def insert_copy(cur, df: pd.DataFrame, table: str, columns: list[str]):
     cur.copy_expert(f"COPY {table} ({','.join(columns)}) FROM STDIN WITH (FORMAT csv, NULL '\\N')", buf)
     tqdm.write(f" Inserido em {table}: {len(df)} registros.")
 
-def extrair_csv_ogr(gdb_path: Path, camada: str, output_csv: Path):
-    run([
-        "ogr2ogr",
-        "-f", "CSV",
-        str(output_csv),
-        str(gdb_path),
-        camada
-    ], check=True)
-
-def importar_ucbt_ogr(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, modo_debug: bool = False):
+def importar_ucbt_fiona(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, modo_debug: bool = False):
     camada = "UCBT"
     import_id = gerar_import_id(prefixo, ano, camada)
     registrar_status(prefixo, ano, camada, "running", distribuidora_nome=distribuidora)
 
-    output_csv = gdb_path.with_suffix(f".{camada.lower()}.csv")
-
     try:
-        tqdm.write(f"Extraindo camada {camada} com ogr2ogr...")
-        extrair_csv_ogr(gdb_path, f"{camada}_tab", output_csv)
+        tqdm.write("🔍 Abrindo camada 'UCBT_tab' com Fiona...")
+        with fiona.open(str(gdb_path), layer="UCBT_tab") as src:
+            dist_id = None
+            chunk_size = 100_000
+            chunk = []
 
-        linhas_processadas = 0
-        with get_db_connection() as conn:
-            with conn.cursor() as cur:
-                for chunk in pd.read_csv(output_csv, chunksize=100_000, dtype=str, na_values=["", "None", "***", "-"]):
-                    chunk.columns = chunk.columns.str.upper()
-                    for col in RELEVANT_COLUMNS:
-                        if col not in chunk.columns:
-                            chunk[col] = None
-
-                    dist_id = sanitize_int(chunk["DIST"]).dropna().unique()
-                    if len(dist_id) != 1:
-                        raise ValueError(f"Esperado um único código de distribuidora, mas encontrei: {dist_id}")
-                    dist_id = int(dist_id[0])
-
-                    chunk["uc_id"] = [
-                        gerar_uc_id(cod, ano, camada, dist_id)
-                        for cod in chunk["COD_ID"]
-                    ]
-                    chunk["import_id"] = import_id
-                    chunk["distribuidora_id"] = dist_id
-                    chunk["origem"] = camada
-                    chunk["ano"] = ano
-                    chunk["status"] = "raw"
-                    chunk["data_conexao"] = pd.to_datetime(chunk["DAT_CON"], errors="coerce")
-                    chunk["cnae"] = sanitize_cnae(chunk["CNAE"])
-                    chunk["grupo_tensao"] = chunk["GRU_TEN"].apply(sanitize_grupo_tensao)
-                    chunk["modalidade"] = chunk["GRU_TAR"].apply(sanitize_modalidade)
-                    chunk["tipo_sistema"] = chunk["TIP_SIST"].apply(sanitize_tipo_sistema)
-                    chunk["situacao"] = chunk["SIT_ATIV"].apply(sanitize_situacao)
-                    chunk["classe"] = chunk["CLAS_SUB"].apply(sanitize_classe)
-                    chunk["segmento"] = None
-                    chunk["subestacao"] = sanitize_str(chunk.get("SUB"))
-                    chunk["municipio_id"] = sanitize_int(chunk["MUN"])
-                    chunk["bairro"] = sanitize_str(chunk["BRR"])
-                    chunk["cep"] = sanitize_int(chunk["CEP"])
-                    chunk["pac"] = chunk["PAC"].apply(sanitize_pac)
-                    chunk["pn_con"] = sanitize_str(chunk["PN_CON"])
-                    chunk["descricao"] = sanitize_str(chunk["DESCR"])
-
-                    df_bruto = chunk[[
-                        "uc_id", "import_id", "COD_ID", "distribuidora_id", "origem", "ano", "status", "data_conexao",
-                        "cnae", "grupo_tensao", "modalidade", "tipo_sistema", "situacao", "classe", "segmento",
-                        "subestacao", "municipio_id", "bairro", "cep", "pac", "pn_con", "descricao"
-                    ]].rename(columns={"COD_ID": "cod_id"})
-
-                    df_bruto.drop_duplicates(subset="uc_id", inplace=True)
-                    insert_copy(cur, df_bruto, "lead_bruto", df_bruto.columns.tolist())
-                    conn.commit()
-                    linhas_processadas += len(df_bruto)
-
-        # Pós-inserção: puxar IDs para foreign key
-        df_ids = pd.read_sql("""
-            SELECT id AS lead_bruto_id, uc_id FROM lead_bruto WHERE import_id = %s
-        """, conn, params=(import_id,))
-
-        # Segunda rodada para inserir energia e qualidade
-        for chunk in pd.read_csv(output_csv, chunksize=100_000, dtype=str, na_values=["", "None", "***", "-"]):
-            chunk.columns = chunk.columns.str.upper()
-            chunk["uc_id"] = [
-                gerar_uc_id(cod, ano, camada, dist_id)
-                for cod in chunk["COD_ID"]
-            ]
-            df_energy = []
-            df_qual = []
-            for mes in range(1, 13):
-                df_energy.append(pd.DataFrame({
-                    "uc_id": chunk["uc_id"],
-                    "mes": mes,
-                    "energia_ponta": None,
-                    "energia_fora_ponta": None,
-                    "energia_total": sanitize_numeric(chunk.get(f"ENE_{mes:02d}")),
-                    "origem": camada
-                }))
-                df_qual.append(pd.DataFrame({
-                    "uc_id": chunk["uc_id"],
-                    "mes": mes,
-                    "dic": sanitize_numeric(chunk.get(f"DIC_{mes:02d}")),
-                    "fic": sanitize_numeric(chunk.get(f"FIC_{mes:02d}")),
-                    "sem_rede": sanitize_numeric(chunk.get("SEMRED")),
-                    "origem": camada
-                }))
-            df_energia = pd.concat(df_energy).reset_index(drop=True)
-            df_qualidade = pd.concat(df_qual).reset_index(drop=True)
-
-            df_energia = df_energia.merge(df_ids, on="uc_id").drop(columns=["uc_id"])
-            df_qualidade = df_qualidade.merge(df_ids, on="uc_id").drop(columns=["uc_id"])
+            total_inserted = 0
+            all_uc_ids = []
 
             with get_db_connection() as conn:
                 with conn.cursor() as cur:
-                    insert_copy(cur, df_energia, "lead_energia_mensal", df_energia.columns.tolist())
-                    insert_copy(cur, df_qualidade, "lead_qualidade_mensal", df_qualidade.columns.tolist())
-                conn.commit()
+                    for feature in tqdm(src, desc="📦 Processando registros"):
+                        row = feature["properties"]
+                        row = {k.upper(): (None if str(v).strip() in ["", "None", "***", "-"] else v) for k, v in row.items()}
 
-        registrar_status(
-            prefixo, ano, camada, "completed",
-            linhas_processadas=linhas_processadas,
-            import_id=import_id
-        )
-        tqdm.write("✅ Importação UCBT via ogr2ogr finalizada com sucesso!")
+                        # Pega o dist_id na primeira linha
+                        if dist_id is None:
+                            dist_val = sanitize_int(pd.Series([row.get("DIST")])).dropna().unique()
+                            if len(dist_val) != 1:
+                                raise ValueError(f"Esperado um único código de distribuidora, encontrei: {dist_val}")
+                            dist_id = int(dist_val[0])
+
+                        chunk.append(row)
+                        if len(chunk) >= chunk_size:
+                            total_inserted += processar_chunk(chunk, cur, import_id, ano, camada, dist_id, all_uc_ids)
+                            conn.commit()
+                            chunk = []
+
+                    # Finaliza último bloco
+                    if chunk:
+                        total_inserted += processar_chunk(chunk, cur, import_id, ano, camada, dist_id, all_uc_ids)
+                        conn.commit()
+
+            # Segundo estágio: gerar tabelas mensais
+            df_ids = pd.read_sql("""
+                SELECT id AS lead_bruto_id, uc_id FROM lead_bruto WHERE import_id = %s
+            """, get_db_connection(), params=(import_id,))
+
+            ucid_map = df_ids.set_index("uc_id")["lead_bruto_id"].to_dict()
+            gerar_mensais(ucid_map, gdb_path, camada, ano, all_uc_ids, import_id)
+
+            registrar_status(prefixo, ano, camada, "completed", linhas_processadas=total_inserted, import_id=import_id)
+            tqdm.write("✅ Importação UCBT finalizada com sucesso!")
 
     except Exception as e:
-        tqdm.write(f"❌ Erro na importação UCBT via ogr2ogr: {e}")
+        tqdm.write(f"❌ Erro na importação de UCBT: {e}")
         registrar_status(prefixo, ano, camada, "failed", erro=str(e), import_id=import_id)
         if modo_debug:
             raise
+
+def processar_chunk(chunk_data, cur, import_id, ano, camada, dist_id, all_uc_ids):
+    df = pd.DataFrame(chunk_data)
+    for col in RELEVANT_COLUMNS:
+        if col not in df.columns:
+            df[col] = None
+
+    df["uc_id"] = [
+        gerar_uc_id(cod, ano, camada, dist_id)
+        for cod in df["COD_ID"]
+    ]
+    all_uc_ids.extend(df["uc_id"].tolist())
+
+    df["import_id"] = import_id
+    df["distribuidora_id"] = dist_id
+    df["origem"] = camada
+    df["ano"] = ano
+    df["status"] = "raw"
+    df["data_conexao"] = pd.to_datetime(df["DAT_CON"], errors="coerce")
+    df["cnae"] = sanitize_cnae(df["CNAE"])
+    df["grupo_tensao"] = df["GRU_TEN"].apply(sanitize_grupo_tensao)
+    df["modalidade"] = df["GRU_TAR"].apply(sanitize_modalidade)
+    df["tipo_sistema"] = df["TIP_SIST"].apply(sanitize_tipo_sistema)
+    df["situacao"] = df["SIT_ATIV"].apply(sanitize_situacao)
+    df["classe"] = df["CLAS_SUB"].apply(sanitize_classe)
+    df["segmento"] = None
+    df["subestacao"] = sanitize_str(df.get("SUB"))
+    df["municipio_id"] = sanitize_int(df["MUN"])
+    df["bairro"] = sanitize_str(df["BRR"])
+    df["cep"] = sanitize_int(df["CEP"])
+    df["pac"] = df["PAC"].apply(sanitize_pac)
+    df["pn_con"] = sanitize_str(df["PN_CON"])
+    df["descricao"] = sanitize_str(df["DESCR"])
+
+    df.drop_duplicates(subset="uc_id", inplace=True)
+    insert_copy(cur, df, "lead_bruto", df.columns.tolist())
+
+    return len(df)
+
+def gerar_mensais(ucid_map, gdb_path: Path, camada: str, ano: int, all_uc_ids: list, import_id: str):
+    tqdm.write("📊 Gerando energia e qualidade mensais...")
+
+    energia_data = []
+    qualidade_data = []
+
+    with fiona.open(str(gdb_path), layer="UCBT_tab") as src:
+        for feature in tqdm(src, desc="📈 Mensais"):
+            row = feature["properties"]
+            row = {k.upper(): (None if str(v).strip() in ["", "None", "***", "-"] else v) for k, v in row.items()}
+            cod_id = row.get("COD_ID")
+            uc_id = gerar_uc_id(cod_id, ano, camada, sanitize_int(pd.Series([row.get("DIST")])).dropna().iloc[0])
+            lead_bruto_id = ucid_map.get(uc_id)
+            if not lead_bruto_id:
+                continue
+
+            for mes in range(1, 13):
+                energia_data.append({
+                    "lead_bruto_id": lead_bruto_id,
+                    "mes": mes,
+                    "energia_ponta": None,
+                    "energia_fora_ponta": None,
+                    "energia_total": sanitize_numeric(row.get(f"ENE_{mes:02d}")),
+                    "origem": camada
+                })
+                qualidade_data.append({
+                    "lead_bruto_id": lead_bruto_id,
+                    "mes": mes,
+                    "dic": sanitize_numeric(row.get(f"DIC_{mes:02d}")),
+                    "fic": sanitize_numeric(row.get(f"FIC_{mes:02d}")),
+                    "sem_rede": sanitize_numeric(row.get("SEMRED")),
+                    "origem": camada
+                })
+
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            insert_copy(cur, pd.DataFrame(energia_data), "lead_energia_mensal", energia_data[0].keys())
+            insert_copy(cur, pd.DataFrame(qualidade_data), "lead_qualidade_mensal", qualidade_data[0].keys())
+        conn.commit()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -174,7 +182,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    importar_ucbt_ogr(
+    importar_ucbt_fiona(
         gdb_path=args.gdb,
         distribuidora=args.distribuidora,
         ano=args.ano,
