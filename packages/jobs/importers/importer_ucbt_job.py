@@ -44,7 +44,7 @@ def importar_ucbt_fiona(gdb_path: Path, distribuidora: str, ano: int, prefixo: s
     registrar_status(prefixo, ano, camada, "running", distribuidora_nome=distribuidora)
 
     try:
-        tqdm.write("🔍 Abrindo camada 'UCBT_tab' com Fiona...")
+        tqdm.write(" Abrindo camada 'UCBT_tab' com Fiona...")
         with fiona.open(str(gdb_path), layer="UCBT_tab") as src:
             dist_id = None
             chunk_size = 100_000
