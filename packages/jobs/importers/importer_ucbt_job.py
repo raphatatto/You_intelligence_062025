@@ -55,7 +55,7 @@ def importar_ucbt_fiona(gdb_path: Path, distribuidora: str, ano: int, prefixo: s
 
             with get_db_connection() as conn:
                 with conn.cursor() as cur:
-                    for feature in tqdm(src, desc="📦 Processando registros"):
+                    for feature in tqdm(src, desc=" Processando registros"):
                         row = feature["properties"]
                         row = {k.upper(): (None if str(v).strip() in ["", "None", "***", "-"] else v) for k, v in row.items()}
 
@@ -93,6 +93,14 @@ def importar_ucbt_fiona(gdb_path: Path, distribuidora: str, ano: int, prefixo: s
 
 def processar_chunk(chunk_data, cur, import_id, ano, camada, dist_id, all_uc_ids):
     df = pd.DataFrame(chunk_data)
+
+    # Filtro de segurança
+    antes = len(df)
+    df = df[df["COD_ID"].notna()]
+    descartadas = antes - len(df)
+    if descartadas > 0:
+        tqdm.write(f"  {descartadas} registros descartados por COD_ID nulo.")
+
     for col in RELEVANT_COLUMNS:
         if col not in df.columns:
             df[col] = None
