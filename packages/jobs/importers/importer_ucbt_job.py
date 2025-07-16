@@ -24,12 +24,14 @@ from packages.jobs.utils.sanitize import (
 
 RELEVANT_COLUMNS = [
     "COD_ID", "DIST", "CNAE", "DAT_CON", "PAC", "GRU_TEN", "GRU_TAR", "TIP_SIST",
-    "SIT_ATIV", "CLAS_SUB", "CONJ", "MUN", "BRR", "CEP", "PN_CON", "DESCR"
+    "SIT_ATIV", "CLAS_SUB", "CONJ", "MUN", "BRR", "CEP", "PN_CON", "DESCR", "SUB"
 ]
+
 
 def gerar_uc_id(cod_id: str, ano: int, camada: str, distribuidora_id: int) -> str:
     base = f"{cod_id}_{ano}_{camada}_{distribuidora_id}"
     return hashlib.sha256(base.encode()).hexdigest()
+
 
 def insert_copy(cur, df: pd.DataFrame, table: str, columns: list[str]):
     buf = io.StringIO()
@@ -38,28 +40,27 @@ def insert_copy(cur, df: pd.DataFrame, table: str, columns: list[str]):
     cur.copy_expert(f"COPY {table} ({','.join(columns)}) FROM STDIN WITH (FORMAT csv, NULL '\\N')", buf)
     tqdm.write(f" Inserido em {table}: {len(df)} registros.")
 
+
 def importar_ucbt_fiona(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, modo_debug: bool = False):
     camada = "UCBT"
     import_id = gerar_import_id(prefixo, ano, camada)
     registrar_status(prefixo, ano, camada, "running", distribuidora_nome=distribuidora)
 
     try:
-        tqdm.write("🔍 Abrindo camada 'UCBT_tab' com Fiona...")
+        tqdm.write(" Abrindo camada 'UCBT_tab' com Fiona...")
         with fiona.open(str(gdb_path), layer="UCBT_tab") as src:
             dist_id = None
-            chunk_size = 100_000
+            chunk_size = 50_000
             chunk = []
-
             total_inserted = 0
             all_uc_ids = []
 
             with get_db_connection() as conn:
                 with conn.cursor() as cur:
-                    for feature in tqdm(src, desc="📦 Processando registros"):
+                    for feature in tqdm(src, desc=" Processando registros"):
                         row = feature["properties"]
                         row = {k.upper(): (None if str(v).strip() in ["", "None", "***", "-"] else v) for k, v in row.items()}
 
-                        # Pega o dist_id na primeira linha
                         if dist_id is None:
                             dist_val = sanitize_int(pd.Series([row.get("DIST")])).dropna().unique()
                             if len(dist_val) != 1:
@@ -72,27 +73,26 @@ def importar_ucbt_fiona(gdb_path: Path, distribuidora: str, ano: int, prefixo: s
                             conn.commit()
                             chunk = []
 
-                    # Finaliza último bloco
                     if chunk:
                         total_inserted += processar_chunk(chunk, cur, import_id, ano, camada, dist_id, all_uc_ids)
                         conn.commit()
 
-            # Segundo estágio: gerar tabelas mensais
-            df_ids = pd.read_sql("""
-                SELECT id AS lead_bruto_id, uc_id FROM lead_bruto WHERE import_id = %s
-            """, get_db_connection(), params=(import_id,))
+        df_ids = pd.read_sql("""
+            SELECT id AS lead_bruto_id, uc_id FROM lead_bruto WHERE import_id = %s
+        """, get_db_connection(), params=(import_id,))
 
-            ucid_map = df_ids.set_index("uc_id")["lead_bruto_id"].to_dict()
-            gerar_mensais(ucid_map, gdb_path, camada, ano, all_uc_ids, import_id)
+        ucid_map = df_ids.set_index("uc_id")["lead_bruto_id"].to_dict()
+        gerar_mensais(ucid_map, gdb_path, camada, ano, all_uc_ids, import_id)
 
-            registrar_status(prefixo, ano, camada, "completed", linhas_processadas=total_inserted, import_id=import_id)
-            tqdm.write(" Importação UCBT finalizada com sucesso!")
+        registrar_status(prefixo, ano, camada, "completed", linhas_processadas=total_inserted, import_id=import_id)
+        tqdm.write(" Importação UCBT finalizada com sucesso!")
 
     except Exception as e:
         tqdm.write(f" Erro na importação de UCBT: {e}")
         registrar_status(prefixo, ano, camada, "failed", erro=str(e), import_id=import_id)
         if modo_debug:
             raise
+
 
 def processar_chunk(chunk_data, cur, import_id, ano, camada, dist_id, all_uc_ids):
     df = pd.DataFrame(chunk_data)
@@ -132,6 +132,7 @@ def processar_chunk(chunk_data, cur, import_id, ano, camada, dist_id, all_uc_ids
 
     return len(df)
 
+
 def gerar_mensais(ucid_map, gdb_path: Path, camada: str, ano: int, all_uc_ids: list, import_id: str):
     tqdm.write(" Gerando energia e qualidade mensais...")
 
@@ -143,7 +144,8 @@ def gerar_mensais(ucid_map, gdb_path: Path, camada: str, ano: int, all_uc_ids: l
             row = feature["properties"]
             row = {k.upper(): (None if str(v).strip() in ["", "None", "***", "-"] else v) for k, v in row.items()}
             cod_id = row.get("COD_ID")
-            uc_id = gerar_uc_id(cod_id, ano, camada, sanitize_int(pd.Series([row.get("DIST")])).dropna().iloc[0])
+            dist_id = sanitize_int(pd.Series([row.get("DIST")])).dropna().iloc[0]
+            uc_id = gerar_uc_id(cod_id, ano, camada, dist_id)
             lead_bruto_id = ucid_map.get(uc_id)
             if not lead_bruto_id:
                 continue
@@ -171,6 +173,7 @@ def gerar_mensais(ucid_map, gdb_path: Path, camada: str, ano: int, all_uc_ids: l
             insert_copy(cur, pd.DataFrame(energia_data), "lead_energia_mensal", energia_data[0].keys())
             insert_copy(cur, pd.DataFrame(qualidade_data), "lead_qualidade_mensal", qualidade_data[0].keys())
         conn.commit()
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
