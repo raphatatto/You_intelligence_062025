@@ -111,6 +111,7 @@ def processar_chunk(chunk_data, cur, import_id, ano, camada, dist_id, all_uc_ids
     ]
     all_uc_ids.extend(df["uc_id"].tolist())
 
+    df["cod_id"] = df["COD_ID"]
     df["import_id"] = import_id
     df["distribuidora_id"] = dist_id
     df["origem"] = camada
@@ -135,7 +136,7 @@ def processar_chunk(chunk_data, cur, import_id, ano, camada, dist_id, all_uc_ids
     df.drop_duplicates(subset="uc_id", inplace=True)
 
     colunas_validas = [
-        "uc_id", "import_id", "distribuidora_id", "origem", "ano", "status",
+        "uc_id", "import_id", "cod_id", "distribuidora_id", "origem", "ano", "status",
         "data_conexao", "cnae", "grupo_tensao", "modalidade", "tipo_sistema", "situacao",
         "classe", "segmento", "subestacao", "municipio_id", "bairro", "cep", "pac",
         "pn_con", "descricao"
