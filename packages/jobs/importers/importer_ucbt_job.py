@@ -86,10 +86,10 @@ def importar_ucbt_fiona(gdb_path: Path, distribuidora: str, ano: int, prefixo: s
             gerar_mensais(ucid_map, gdb_path, camada, ano, all_uc_ids, import_id)
 
             registrar_status(prefixo, ano, camada, "completed", linhas_processadas=total_inserted, import_id=import_id)
-            tqdm.write("✅ Importação UCBT finalizada com sucesso!")
+            tqdm.write(" Importação UCBT finalizada com sucesso!")
 
     except Exception as e:
-        tqdm.write(f"❌ Erro na importação de UCBT: {e}")
+        tqdm.write(f" Erro na importação de UCBT: {e}")
         registrar_status(prefixo, ano, camada, "failed", erro=str(e), import_id=import_id)
         if modo_debug:
             raise
@@ -133,13 +133,13 @@ def processar_chunk(chunk_data, cur, import_id, ano, camada, dist_id, all_uc_ids
     return len(df)
 
 def gerar_mensais(ucid_map, gdb_path: Path, camada: str, ano: int, all_uc_ids: list, import_id: str):
-    tqdm.write("📊 Gerando energia e qualidade mensais...")
+    tqdm.write(" Gerando energia e qualidade mensais...")
 
     energia_data = []
     qualidade_data = []
 
     with fiona.open(str(gdb_path), layer="UCBT_tab") as src:
-        for feature in tqdm(src, desc="📈 Mensais"):
+        for feature in tqdm(src, desc=" Mensais"):
             row = feature["properties"]
             row = {k.upper(): (None if str(v).strip() in ["", "None", "***", "-"] else v) for k, v in row.items()}
             cod_id = row.get("COD_ID")
