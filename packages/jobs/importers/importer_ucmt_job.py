@@ -173,10 +173,12 @@ def importar_ucmt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
             conn.commit()
 
         registrar_status(
-            prefixo, ano, camada, "completed",
-            linhas_processadas=len(df_bruto),
-            import_id=import_id
-        )
+    prefixo, ano, camada, "completed",
+    linhas_processadas=len(df_bruto),
+    observacoes=f"{len(df_energia)} energia | {len(df_demanda)} demanda | {len(df_qualidade)} qualidade",
+    import_id=import_id
+)
+
         tqdm.write(" Importação UCMT finalizada com sucesso!")
 
     except Exception as e:
