@@ -54,10 +54,14 @@ def importar_ponnot(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, 
 
         tqdm.write(" Transformando PONNOT para DataFrame...")
 
-        dist_id = sanitize_int(gdf["ID"]).dropna().unique()
-        if len(dist_id) != 1:
-            raise ValueError(f"Esperado um único código de distribuidora, mas encontrei: {dist_id}")
-        dist_id = int(dist_id[0])
+        # Verifica se a coluna ID (DIST) é válida
+        dist_ids = sanitize_int(gdf["ID"]).dropna().unique()
+        if len(dist_ids) != 1:
+            tqdm.write(f"⚠️  Coluna 'ID' está vazia ou possui múltiplos códigos em PONNOT {prefixo}. Pulando importação.")
+            registrar_status(prefixo, ano, camada, "skipped", import_id=import_id, observacoes="ID inválido em PONNOT")
+            return
+
+        dist_id = int(dist_ids[0])
 
         df_pn = pd.DataFrame({
             "pn_id": [

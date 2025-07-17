@@ -1,17 +1,28 @@
-# Ignorar dependências locais e arquivos temporários
+# Dependências e cache
 node_modules/
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+.venv/
 
-# Ambientes e configs locais
-.env
-.env.*
+# IDEs e configs locais
 .vscode/
 .idea/
+.env
+.env.*
 
-# Artefatos do frontend que não interessam para o container da API
+# Frontend
 apps/frontend/.next/
 apps/frontend/node_modules/
 apps/frontend/.env.local
+
+# Dados do orquestrador (evita subir 6GB à toa!)
+data/downloads/
+data/tmp/
+*.gdb
+*.zip
+
+# Arquivos desnecessários
+.DS_Store
+*.log
