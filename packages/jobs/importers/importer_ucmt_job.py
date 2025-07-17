@@ -173,13 +173,14 @@ def importar_ucmt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
             conn.commit()
 
         registrar_status(
-    prefixo, ano, camada, "completed",
-    linhas_processadas=len(df_bruto),
-    observacoes=f"{len(df_energia)} energia | {len(df_demanda)} demanda | {len(df_qualidade)} qualidade",
-    import_id=import_id
-)
+            prefixo, ano, camada, "completed",
+            linhas_processadas=len(df_bruto),
+            observacoes=f"{len(df_energia)} energia | {len(df_demanda)} demanda | {len(df_qualidade)} qualidade",
+            import_id=import_id
+        )
+        tqdm.write(f" Importação UCBT finalizada com sucesso!")
+        tqdm.write(f" -> {len(df_energia)} energia_mensal | {len(df_demanda)} demanda_mensal | {len(df_qualidade)} qualidade_mensal")
 
-        tqdm.write(" Importação UCMT finalizada com sucesso!")
 
     except Exception as e:
         tqdm.write(f" Erro ao importar UCMT: {e}")
