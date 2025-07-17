@@ -6,6 +6,7 @@ import geopandas as gpd
 from pathlib import Path
 from tqdm import tqdm
 from fiona import listlayers
+from datetime import datetime
 
 from packages.database.connection import get_db_connection
 from packages.jobs.utils.rastreio import registrar_status, gerar_import_id
@@ -69,12 +70,14 @@ def importar_ponnot(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, 
                 for _, row in gdf.iterrows()
             ],
             "import_id": import_id,
+            "distribuidora_id": dist_id,
             "nome": sanitize_str(gdf["NOME"]),
             "municipio_id": sanitize_int(gdf["MUN"]),
             "latitude": sanitize_numeric(gdf["LAT"]),
             "longitude": sanitize_numeric(gdf["LONG"]),
             "descricao": sanitize_str(gdf["DESCR"]),
             "cep": sanitize_int(gdf["CEP"]),
+            "created_at": datetime.utcnow()
         })
 
         df_pn = df_pn[df_pn["pn_id"].notnull()].drop_duplicates(subset=["pn_id"]).reset_index(drop=True)
