@@ -1,7 +1,6 @@
-import os
 import io
-import hashlib
 import argparse
+import hashlib
 import pandas as pd
 import geopandas as gpd
 from pathlib import Path
@@ -10,83 +9,91 @@ from fiona import listlayers
 
 from packages.database.connection import get_db_connection
 from packages.jobs.utils.rastreio import registrar_status, gerar_import_id
+from packages.jobs.utils.sanitize import sanitize_int, sanitize_str, sanitize_numeric
+
+
+RELEVANT_COLUMNS = ["ID", "MUN", "NOME", "LAT", "LONG", "DESCR", "CEP"]
 
 def detectar_layer(gdb_path: Path) -> str:
     layers = listlayers(str(gdb_path))
-    tqdm.write(f"Layers disponíveis: {layers}")
     return next((l for l in layers if l.upper().startswith("PONNOT")), None)
 
-def insert_copy(cur, df: pd.DataFrame, table: str, columns: list[str]):
-    try:
-        tqdm.write(f"Iniciando inserção de {len(df)} registros na tabela {table}...")
-        buf = io.StringIO()
-        df.to_csv(buf, index=False, header=False, columns=columns, na_rep='\\N')
-        buf.seek(0)
-        cur.copy_expert(f"COPY {table} ({','.join(columns)}) FROM STDIN WITH (FORMAT csv, NULL '\\N')", buf)
-        tqdm.write(f"Inserido com sucesso em {table}.")
-    except Exception as e:
-        tqdm.write(f"Falha ao inserir no banco: {e}")
-        raise
+def gerar_pn_id(pn_nome: str, latitude: float, longitude: float, ano: int, dist_id: int) -> str:
+    base = f"{pn_nome}_{latitude}_{longitude}_{ano}_{dist_id}"
+    return hashlib.sha256(base.encode()).hexdigest()
 
-def importar_ponnot(
-    gdb_path: Path,
-    distribuidora: str,
-    ano: int,
-    prefixo: str,
-    modo_debug: bool = False
-):
+def insert_copy(cur, df: pd.DataFrame, table: str, columns: list[str]):
+    buf = io.StringIO()
+    df.to_csv(buf, index=False, header=False, columns=columns, na_rep='\\N')
+    buf.seek(0)
+    cur.copy_expert(f"COPY {table} ({','.join(columns)}) FROM STDIN WITH (FORMAT csv, NULL '\\N')", buf)
+    tqdm.write(f" Inserido em {table}: {len(df)} registros.")
+
+def importar_ponnot(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, modo_debug: bool = False):
     camada = "PONNOT"
-    tqdm.write(f"Iniciando importação PONNOT | Distribuidora: {distribuidora} | Ano: {ano} | GDB: {gdb_path.name}")
-    registrar_status(prefixo, ano, camada, "running")
     import_id = gerar_import_id(prefixo, ano, camada)
+    registrar_status(prefixo, ano, camada, "running", distribuidora_nome=distribuidora)
 
     try:
         layer = detectar_layer(gdb_path)
         if not layer:
             raise Exception("Camada PONNOT não encontrada no GDB.")
 
-        tqdm.write(f"Lendo camada '{layer}' do arquivo {gdb_path.name}...")
+        tqdm.write(f" Lendo camada '{layer}'...")
         gdf = gpd.read_file(str(gdb_path), layer=layer)
 
-        if gdf.empty:
-            tqdm.write("Camada está vazia!")
-            registrar_status(prefixo, ano, camada, "no_new_rows")
+        if len(gdf) == 0:
+            registrar_status(prefixo, ano, camada, "no_new_rows", import_id=import_id)
             return
 
-        if "COD_ID" not in gdf.columns:
-            raise Exception("Coluna 'COD_ID' não encontrada na camada PONNOT.")
+        gdf.replace(["None", "nan", "", "***", "-"], None, inplace=True)
 
-        tqdm.write(f"Extraindo {len(gdf)} coordenadas...")
-        df = pd.DataFrame({
-            "pn_id": gdf["COD_ID"].astype(str),
-            "latitude": gdf.geometry.y,
-            "longitude": gdf.geometry.x,
-            "distribuidora_id": distribuidora,
-            "ano": ano
+        for col in RELEVANT_COLUMNS:
+            if col not in gdf.columns:
+                gdf[col] = None
+
+        tqdm.write(" Transformando PONNOT para DataFrame...")
+
+        dist_id = sanitize_int(gdf["ID"]).dropna().unique()
+        if len(dist_id) != 1:
+            raise ValueError(f"Esperado um único código de distribuidora, mas encontrei: {dist_id}")
+        dist_id = int(dist_id[0])
+
+        df_pn = pd.DataFrame({
+            "pn_id": [
+                gerar_pn_id(row["NOME"], row["LAT"], row["LONG"], ano, dist_id)
+                for _, row in gdf.iterrows()
+            ],
+            "import_id": import_id,
+            "nome": sanitize_str(gdf["NOME"]),
+            "municipio_id": sanitize_int(gdf["MUN"]),
+            "latitude": sanitize_numeric(gdf["LAT"]),
+            "longitude": sanitize_numeric(gdf["LONG"]),
+            "descricao": sanitize_str(gdf["DESCR"]),
+            "cep": sanitize_int(gdf["CEP"]),
         })
 
-        df = df.drop_duplicates(subset=["pn_id", "distribuidora_id", "ano"])
-        df = df.dropna(subset=["latitude", "longitude"]).reset_index(drop=True)
-        tqdm.write(f"Após limpeza: {len(df)} registros únicos com coordenadas válidas.")
+        df_pn = df_pn[df_pn["pn_id"].notnull()].drop_duplicates(subset=["pn_id"]).reset_index(drop=True)
 
         with get_db_connection() as conn:
             with conn.cursor() as cur:
-                insert_copy(
-                    cur,
-                    df,
-                    "ponto_notavel",
-                    ["pn_id", "latitude", "longitude", "distribuidora_id", "ano"]
-                )
+                insert_copy(cur, df_pn, "ponto_notavel", df_pn.columns.tolist())
             conn.commit()
 
-        registrar_status(prefixo, ano, camada, "completed")
-        tqdm.write("Importação PONNOT finalizada com sucesso!")
+        registrar_status(
+            prefixo, ano, camada, "completed",
+            linhas_processadas=len(df_pn),
+            import_id=import_id,
+            observacoes=f"{len(df_pn)} pontos notáveis"
+        )
+        tqdm.write(" Importação PONNOT finalizada com sucesso!")
 
     except Exception as e:
-        tqdm.write(f"Erro ao importar PONNOT: {e}")
-        registrar_status(prefixo, ano, camada, "failed", erro=str(e))
+        tqdm.write(f" Erro ao importar PONNOT: {e}")
+        registrar_status(prefixo, ano, camada, "failed", erro=str(e), import_id=import_id)
         if modo_debug:
             raise
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
