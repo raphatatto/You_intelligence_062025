@@ -111,7 +111,7 @@ def importar_ucat(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
         df_bruto = df_bruto[df_bruto["uc_id"].notnull()].reset_index(drop=True)
         gdf = gdf.loc[df_bruto.index].reset_index(drop=True)
 
-        tqdm.write(" Transformando UCAT para lead_energia_mensal...")
+        tqdm.write("Transformando UCAT para lead_energia_mensal...")
         energia_df = []
         for mes in range(1, 13):
             energia_df.append(pd.DataFrame({
@@ -184,7 +184,7 @@ def importar_ucat(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
         )
 
         tqdm.write(f" UCAT finalizado: {len(df_bruto)} registros brutos")
-        tqdm.write(f"  → {len(df_energia)} energia_mensal, {len(df_demanda)} demanda_mensal, {len(df_qualidade)} qualidade_mensal")
+        tqdm.write(f" {len(df_energia)} energia_mensal, {len(df_demanda)} demanda_mensal, {len(df_qualidade)} qualidade_mensal")
 
     except Exception as e:
         tqdm.write(f" Erro ao importar UCAT: {e}")
