@@ -1,4 +1,5 @@
 import io
+import sys
 import argparse
 import hashlib
 import pandas as pd
@@ -12,6 +13,8 @@ from packages.database.connection import get_db_connection
 from packages.jobs.utils.rastreio import registrar_status, gerar_import_id
 from packages.jobs.utils.sanitize import sanitize_int, sanitize_str, sanitize_numeric
 
+# Força encoding UTF-8 para evitar erro com acentuação no Windows
+sys.stdout.reconfigure(encoding='utf-8')
 
 RELEVANT_COLUMNS = ["ID", "MUN", "NOME", "LAT", "LONG", "DESCR", "CEP"]
 
@@ -24,11 +27,15 @@ def gerar_pn_id(pn_nome: str, latitude: float, longitude: float, ano: int, dist_
     return hashlib.sha256(base.encode()).hexdigest()
 
 def insert_copy(cur, df: pd.DataFrame, table: str, columns: list[str]):
-    buf = io.StringIO()
-    df.to_csv(buf, index=False, header=False, columns=columns, na_rep='\\N')
-    buf.seek(0)
-    cur.copy_expert(f"COPY {table} ({','.join(columns)}) FROM STDIN WITH (FORMAT csv, NULL '\\N')", buf)
-    tqdm.write(f" Inserido em {table}: {len(df)} registros.")
+    try:
+        buf = io.StringIO()
+        df.to_csv(buf, index=False, header=False, columns=columns, na_rep='\\N')
+        buf.seek(0)
+        cur.copy_expert(f"COPY {table} ({','.join(columns)}) FROM STDIN WITH (FORMAT csv, NULL '\\N')", buf)
+        tqdm.write(f" Inserido em {table}: {len(df)} registros.")
+    except Exception as e:
+        tqdm.write(f" Erro no COPY para {table}: {e}")
+        raise
 
 def importar_ponnot(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, modo_debug: bool = False):
     camada = "PONNOT"
@@ -55,7 +62,6 @@ def importar_ponnot(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, 
 
         tqdm.write(" Transformando PONNOT para DataFrame...")
 
-        # Verifica se a coluna ID (DIST) é válida
         dist_ids = sanitize_int(gdf["ID"]).dropna().unique()
         if len(dist_ids) != 1:
             tqdm.write(f"Coluna 'ID' está vazia ou possui múltiplos códigos em PONNOT {prefixo}. Pulando importação.")
@@ -70,14 +76,12 @@ def importar_ponnot(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, 
                 for _, row in gdf.iterrows()
             ],
             "import_id": import_id,
-            "distribuidora_id": dist_id,
             "nome": sanitize_str(gdf["NOME"]),
             "municipio_id": sanitize_int(gdf["MUN"]),
             "latitude": sanitize_numeric(gdf["LAT"]),
             "longitude": sanitize_numeric(gdf["LONG"]),
             "descricao": sanitize_str(gdf["DESCR"]),
             "cep": sanitize_int(gdf["CEP"]),
-            "created_at": datetime.utcnow()
         })
 
         df_pn = df_pn[df_pn["pn_id"].notnull()].drop_duplicates(subset=["pn_id"]).reset_index(drop=True)
@@ -86,6 +90,7 @@ def importar_ponnot(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, 
             with conn.cursor() as cur:
                 insert_copy(cur, df_pn, "ponto_notavel", df_pn.columns.tolist())
             conn.commit()
+            tqdm.write(" Commit realizado com sucesso.")
 
         registrar_status(
             prefixo, ano, camada, "completed",
@@ -93,14 +98,26 @@ def importar_ponnot(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, 
             import_id=import_id,
             observacoes=f"{len(df_pn)} pontos notáveis"
         )
-        tqdm.write(" Importação PONNOT finalizada com sucesso!")
+
+        tqdm.write(f" PONNOT para {prefixo} concluído com sucesso e {len(df_pn)} registros inseridos.")
 
     except Exception as e:
         tqdm.write(f" Erro ao importar PONNOT: {e}")
         registrar_status(prefixo, ano, camada, "failed", erro=str(e), import_id=import_id)
         if modo_debug:
             raise
-
+    finally:
+        try:
+            with get_db_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "UPDATE import_status SET data_fim = NOW() WHERE import_id = %s",
+                        (import_id,)
+                    )
+                conn.commit()
+                tqdm.write(" Registro de data_fim atualizado.")
+        except Exception as e:
+            tqdm.write(f" Falha ao atualizar data_fim: {e}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
