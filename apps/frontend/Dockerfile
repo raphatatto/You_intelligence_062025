@@ -2,22 +2,18 @@ FROM node:20
 
 WORKDIR /app
 
-# Copia apenas as dependências para aproveitar cache
-COPY package.json .
-COPY package-lock.json .
+# Copia os arquivos de dependência do próprio contexto
+COPY package.json ./
+COPY package-lock.json ./
 
-# Instala as dependências do projeto
 RUN npm config set strict-ssl false
 RUN npm install
 
-# Copia o restante da aplicação
+# Copia o restante do frontend (lembrando: já está dentro de apps/frontend)
 COPY . .
 
-# Expõe a porta padrão do Next.js
 EXPOSE 3000
 
-# Desativa verificação de TLS em ambientes corporativos como o da You.On
 ENV NODE_TLS_REJECT_UNAUTHORIZED=0
 
-# Comando padrão
 CMD ["npm", "run", "dev"]

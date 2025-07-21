@@ -1,44 +1,16 @@
 'use client';
 
-import { useState } from 'react';
-import SelectDistribuidoras from './SelectDistribuidoras';
-import SelectAnos from './SelectAnos';
-import ButtonImportar from './ButtonImportar';
-import TabelaStatusImportacoes from './TabelaStatusImportacoes';
-import PainelEnriquecimento from './PainelEnriquecimento';
+import AdminDashboard from './AdminDashboard';
 
 export default function AdminPage() {
-  const [distribuidorasSelecionadas, setDistribuidorasSelecionadas] = useState<string[]>([]);
-  const [anosSelecionados, setAnosSelecionados] = useState<number[]>([]);
-
   return (
-    <div className="bg-zinc-900 border border-zinc-700 text-white rounded-xl shadow p-6">
-      <h1 className="text-4xl font-bold text-center text-white mb-10">
+    <main className="p-6 space-y-12">
+      <header className="text-center">
+        <h1 className="text-4xl font-extrabold text-white">📊 Painel Geral de Administração</h1>
+        <p className="text-zinc-400 mt-2">Visualize o status do banco, importações e enriquecimento em tempo real.</p>
+      </header>
 
-        📊 Painel de Administração de Dados
-      </h1>
-
-
-
-      {/* Importação */}
-      <section className="mb-10">
-        <div className="flex flex-wrap gap-6 items-end bg-zinc-900 border border-zinc-700 text-white p-6 rounded-xl shadow w-fit mb-8">
-        <SelectDistribuidoras onChange={setDistribuidorasSelecionadas} />
-        <SelectAnos onChange={setAnosSelecionados} />
-        <ButtonImportar distribuidoras={distribuidorasSelecionadas} anos={anosSelecionados} />
-        </div>
-
-      </section>
-
-      {/* Status de importações */}
-      <section className="mb-10">
-        <TabelaStatusImportacoes />
-      </section>
-
-      {/* Enriquecimento */}
-      <section className="mb-10">
-        <PainelEnriquecimento />
-      </section>
-    </div>
+      <AdminDashboard />
+    </main>
   );
 }
