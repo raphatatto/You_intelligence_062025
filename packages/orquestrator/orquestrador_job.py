@@ -20,7 +20,7 @@ PREFIXOS = [
 ]
 
 # Camadas a importar
-CAMADAS = ["UCAT", "UCMT", "UCBT", "PONNOT"]
+CAMADAS = ["UCAT", "UCMT", "PONNOT"]
 IMPORTERS = {
     "UCAT": "packages/jobs/importers/importer_ucat_job.py",
     "UCMT": "packages/jobs/importers/importer_ucmt_job.py",

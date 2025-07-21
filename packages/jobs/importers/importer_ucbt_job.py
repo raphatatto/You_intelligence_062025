@@ -1,5 +1,4 @@
 import io
-import csv
 import gc
 import hashlib
 import argparse
@@ -33,31 +32,33 @@ def gerar_uc_id(cod_id: str, ano: int, camada: str, distribuidora_id: int) -> st
     return hashlib.sha256(base.encode()).hexdigest()
 
 def insert_copy(cur, df: pd.DataFrame, table: str, columns: list[str]):
+    if df.empty:
+        tqdm.write(f"Nenhum dado para inserir em {table}")
+        return
     buf = io.StringIO()
     df.to_csv(buf, index=False, header=False, columns=columns, na_rep='\\N')
     buf.seek(0)
     cur.copy_expert(f"COPY {table} ({','.join(columns)}) FROM STDIN WITH (FORMAT csv, NULL '\\N')", buf)
-    tqdm.write(f" Inserido em {table}: {len(df)} registros.")
+    tqdm.write(f"Inserido em {table}: {len(df)} registros")
 
-def importar_ucbt_fiona(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, modo_debug: bool = False):
+def importar_ucbt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, modo_debug: bool = False):
     camada = "UCBT"
     import_id = gerar_import_id(prefixo, ano, camada)
     registrar_status(prefixo, ano, camada, "running", distribuidora_nome=distribuidora)
 
     try:
-        tqdm.write(" Abrindo camada 'UCBT_tab' com Fiona...")
+        tqdm.write("Abrindo camada 'UCBT_tab' com Fiona...")
         with fiona.open(str(gdb_path), layer="UCBT_tab") as src:
             dist_id = None
             chunk_size = 100_000
             chunk = []
-
-            total_inserted = 0
             all_uc_ids = []
             all_rows = []
+            total_inserted = 0
 
             with get_db_connection() as conn:
                 with conn.cursor() as cur:
-                    for feature in tqdm(src, desc=" Processando registros"):
+                    for feature in tqdm(src, desc="Processando registros"):
                         row = feature["properties"]
                         row = {k.upper(): (None if str(v).strip() in ["", "None", "***", "-"] else v) for k, v in row.items()}
                         all_rows.append(row)
@@ -70,20 +71,24 @@ def importar_ucbt_fiona(gdb_path: Path, distribuidora: str, ano: int, prefixo: s
 
                         chunk.append(row)
                         if len(chunk) >= chunk_size:
-                            total_inserted += processar_chunk(chunk, cur, import_id, ano, camada, dist_id, all_uc_ids)
+                            inserted = processar_chunk(chunk, cur, import_id, ano, camada, dist_id, all_uc_ids)
+                            total_inserted += inserted
                             conn.commit()
                             chunk = []
                             gc.collect()
 
                     if chunk:
-                        total_inserted += processar_chunk(chunk, cur, import_id, ano, camada, dist_id, all_uc_ids)
+                        inserted = processar_chunk(chunk, cur, import_id, ano, camada, dist_id, all_uc_ids)
+                        total_inserted += inserted
                         conn.commit()
-                        gc.collect()
 
-            tqdm.write(" Gerando dados mensais (energia, qualidade, demanda)...")
+                    if total_inserted == 0:
+                        registrar_status(prefixo, ano, camada, "no_new_rows", import_id=import_id)
+                        tqdm.write("Nenhum registro válido para importar.")
+                        return
 
-            with get_db_connection() as conn:
-                with conn.cursor() as cur:
+                    tqdm.write("Gerando dados mensais...")
+
                     df_ids = pd.read_sql("""
                         SELECT id AS lead_bruto_id, uc_id FROM lead_bruto WHERE import_id = %s
                     """, conn, params=(import_id,))
@@ -91,7 +96,7 @@ def importar_ucbt_fiona(gdb_path: Path, distribuidora: str, ano: int, prefixo: s
 
                     energia_data, qualidade_data, demanda_data = [], [], []
 
-                    for row in tqdm(all_rows, desc=" Mensais"):
+                    for row in tqdm(all_rows, desc="Mensais"):
                         cod_id = row.get("COD_ID")
                         uc_id = gerar_uc_id(cod_id, ano, camada, dist_id)
                         lead_bruto_id = ucid_map.get(uc_id)
@@ -128,29 +133,33 @@ def importar_ucbt_fiona(gdb_path: Path, distribuidora: str, ano: int, prefixo: s
                                 "import_id": import_id
                             })
 
-                    insert_copy(cur, pd.DataFrame(energia_data), "lead_energia_mensal", list(energia_data[0].keys()))
-                    insert_copy(cur, pd.DataFrame(qualidade_data), "lead_qualidade_mensal", list(qualidade_data[0].keys()))
-                    insert_copy(cur, pd.DataFrame(demanda_data), "lead_demanda_mensal", list(demanda_data[0].keys()))
-                conn.commit()
+                    energia_df = pd.DataFrame(energia_data)
+                    qualidade_df = pd.DataFrame(qualidade_data)
+                    demanda_df = pd.DataFrame(demanda_data)
+
+                    insert_copy(cur, energia_df, "lead_energia_mensal", list(energia_df.columns))
+                    insert_copy(cur, qualidade_df, "lead_qualidade_mensal", list(qualidade_df.columns))
+                    insert_copy(cur, demanda_df, "lead_demanda_mensal", list(demanda_df.columns))
+                    conn.commit()
 
             registrar_status(
                 prefixo, ano, camada, "completed",
                 linhas_processadas=total_inserted,
                 import_id=import_id,
-                observacoes=f"{len(energia_data)} energia | {len(demanda_data)} demanda | {len(qualidade_data)} qualidade"
+                observacoes=f"{len(energia_df)} energia | {len(demanda_df)} demanda | {len(qualidade_df)} qualidade"
             )
-            tqdm.write(" Importação UCBT finalizada com sucesso!")
+            tqdm.write(f"Importação UCBT finalizada com {total_inserted} registros brutos")
 
     except Exception as e:
-        tqdm.write(f" Erro na importação de UCBT: {e}")
+        tqdm.write(f"Erro na importação de UCBT: {e}")
         registrar_status(prefixo, ano, camada, "failed", erro=str(e), import_id=import_id)
         if modo_debug:
             raise
 
 def processar_chunk(chunk_data, cur, import_id, ano, camada, dist_id, all_uc_ids):
     df = pd.DataFrame(chunk_data)
-
     df = df[df["COD_ID"].notna()]
+
     for col in RELEVANT_COLUMNS:
         if col not in df.columns:
             df[col] = None
@@ -191,7 +200,11 @@ def processar_chunk(chunk_data, cur, import_id, ano, camada, dist_id, all_uc_ids
         "classe", "segmento", "subestacao", "municipio_id", "bairro", "cep", "pac",
         "pn_con", "descricao"
     ]
+
     df = df[colunas_validas]
+
+    if df.empty:
+        return 0
 
     insert_copy(cur, df, "lead_bruto", colunas_validas)
     return len(df)
@@ -205,7 +218,7 @@ if __name__ == "__main__":
     parser.add_argument("--modo_debug", action="store_true")
     args = parser.parse_args()
 
-    importar_ucbt_fiona(
+    importar_ucbt(
         gdb_path=args.gdb,
         distribuidora=args.distribuidora,
         ano=args.ano,
