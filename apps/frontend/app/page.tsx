@@ -80,7 +80,6 @@ export default function Dashboard() {
         {/* Leads por Distribuidora */}
         <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5 shadow-lg hover:shadow-cyan-500/10 transition-all">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-white">Leads por Distribuidora</h2>
             <span className="text-xs bg-cyan-900/30 text-cyan-400 px-2 py-1 rounded-full">
               {dataDistribuidora.length} distribuidoras
             </span>
@@ -93,7 +92,6 @@ export default function Dashboard() {
         {/* Top CNAEs */}
         <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5 shadow-lg hover:shadow-purple-500/10 transition-all">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-white">Top 10 CNAEs</h2>
             <span className="text-xs bg-purple-900/30 text-purple-400 px-2 py-1 rounded-full">
               Segmentos mais frequentes
             </span>
@@ -106,7 +104,6 @@ export default function Dashboard() {
         {/* Consumo de Energia */}
         <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5 shadow-lg hover:shadow-blue-500/10 transition-all">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-white">Consumo de Energia Mensal</h2>
             <span className="text-xs bg-blue-900/30 text-blue-400 px-2 py-1 rounded-full">
               Últimos 12 meses
             </span>
@@ -119,7 +116,6 @@ export default function Dashboard() {
         {/* Demanda Mensal */}
         <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5 shadow-lg hover:shadow-orange-500/10 transition-all">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-white">Demanda Mensal</h2>
             <span className="text-xs bg-orange-900/30 text-orange-400 px-2 py-1 rounded-full">
               kW médios
             </span>
@@ -132,7 +128,6 @@ export default function Dashboard() {
         {/* DIC e FIC */}
         <div className="lg:col-span-2 bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5 shadow-lg hover:shadow-emerald-500/10 transition-all">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-white">Indicadores de Continuidade</h2>
             <div className="flex gap-2">
               <span className="text-xs bg-emerald-900/30 text-emerald-400 px-2 py-1 rounded-full">
                 DIC (min)

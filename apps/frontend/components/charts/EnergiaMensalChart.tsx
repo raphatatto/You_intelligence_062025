@@ -3,7 +3,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 
 export default function EnergiaMensalChart({ data }: { data: { mes: string; energia_kwh: number }[] }) {
   return (
-    <div className="bg-zinc-900/50 border border-zinc-700 rounded-xl p-4 h-[400px]">
+    <div className="bg-zinc-900/50 border border-zinc-700 rounded-xl p-4 h-full">
       <h3 className="text-lg font-semibold text-white mb-1">Consumo Mensal de Energia</h3>
       <p className="text-sm text-zinc-400 mb-4">Variação do consumo energético (kWh) por mês</p>
       

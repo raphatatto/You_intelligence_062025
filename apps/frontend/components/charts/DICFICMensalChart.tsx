@@ -3,7 +3,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, Cart
 
 export default function DICFICMensalChart({ data }: { data: { mes: string; dic: number; fic: number }[] }) {
   return (
-    <div className="bg-zinc-900/50 border border-zinc-700 rounded-xl p-4 h-[400px]">
+    <div className="bg-zinc-900/50 border border-zinc-700 rounded-xl p-4 h-full">
       <h3 className="text-lg font-semibold text-white mb-1">Indicadores Mensais</h3>
       <p className="text-sm text-zinc-400 mb-4">Duração e Frequência de Interrupções</p>
       
