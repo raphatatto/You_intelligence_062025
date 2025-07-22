@@ -6,7 +6,7 @@ from apps.api.routes.health import router as health_router
 from apps.api.routes.leads import router as leads_router
 
 # NOVAS ROTAS DO ADMIN
-from apps.api.routes.admin import (
+from apps.api.routes.admin_routes import (
     dashboard as admin_dashboard_router,
     importacoes as admin_importacoes_router,
     leads as admin_leads_router,
