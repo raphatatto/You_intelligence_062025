@@ -59,11 +59,10 @@ export default function AdminPage() {
               <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-start md:items-end">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
                   <div className="space-y-1">
-                    <h3 className="text-xs md:text-sm font-medium text-zinc-400">Distribuidoras</h3>
+                  
                     <SelectDistribuidoras onChange={setDistribuidorasSelecionadas} />
                   </div>
                   <div className="space-y-1">
-                    <h3 className="text-xs md:text-sm font-medium text-zinc-400">Anos</h3>
                     <SelectAnos onChange={setAnosSelecionados} />
                   </div>
                   <div className="flex items-end h-full">

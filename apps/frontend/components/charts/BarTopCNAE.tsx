@@ -12,7 +12,7 @@ export default function BarTopCNAE({ data }: { data: { nome: string; total: numb
   }));
 
   return (
-    <div className="bg-zinc-900/50 border border-zinc-700 rounded-xl p-4 h-[450px]">
+    <div className="bg-zinc-900/50 border border-zinc-700 rounded-xl p-4 h-full">
       <h3 className="text-lg font-semibold text-white mb-1">Top Segmentos CNAE</h3>
       <p className="text-sm text-zinc-400 mb-4">Distribuição de leads por classificação CNAE</p>
       
