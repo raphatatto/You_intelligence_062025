@@ -10,7 +10,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from packages.jobs.utils.rastreio import get_status
-from packages.jobs.downloads.download_gdb import baixar_gdb
+from packages.jobs.download.download_gdb import baixar_gdb
 
 # Caminho onde os .gdb são extraídos
 DOWNLOADS_DIR = Path("data/downloads")
