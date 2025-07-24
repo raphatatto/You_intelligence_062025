@@ -17,20 +17,20 @@ export default function FiltroDistribuidora() {
   )]
 
   return (
-    <label className="text-sm text-white flex items-center gap-2">
-      Distribuidora:
+    <div className="space-y-1">
+      <label className="text-xs text-zinc-400">Distribuidora</label>
       <select
         value={distribuidora}
         onChange={(e) => setDistribuidora(e.target.value)}
-        className="text-xs text-white bg-zinc-800 border border-zinc-600 px-3 py-1.5 rounded-md shadow-sm hover:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-lime-500 transition"
+        className="w-full bg-zinc-800 text-sm text-white border border-zinc-700 px-3 py-2 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
       >
-        <option value="">Todas</option>
+        <option value="">Todas as distribuidoras</option>
         {codigosUsados.map((cod) => (
           <option key={cod} value={cod}>
             {DISTRIBUIDORAS_MAP[cod]}
           </option>
         ))}
       </select>
-    </label>
+    </div>
   )
 }

@@ -6,27 +6,27 @@ import { CNAE_SEGMENTOS } from '@/utils/cnae';
 
 export default function FiltroSegmento() {
   const { segmento, setSegmento } = useFilters();
-  const { leads = [] } = useLeads(); // ajustado para usar leads corretamente
+  const { leads = [] } = useLeads();
 
   const cnaesUnicos = [...new Set(leads.map((l) => l.cnae).filter(Boolean))];
 
   return (
-    <label className="text-sm text-white flex items-center gap-2">
-      Segmento:
-      <select
+    <div className="space-y-1 ">
+      <label className="text-xs text-zinc-400">Segmento</label>
+      <select 
         value={segmento}
         onChange={(e) => setSegmento(e.target.value)}
-        className="text-xs text-white bg-zinc-800 border border-zinc-600 px-3 py-1.5 rounded-md shadow-sm hover:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-lime-500 transition"
+        className="w-full bg-zinc-800 text-sm text-white border border-zinc-700 px-3 py-2 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent "
       >
-        <option value="">Todos</option>
+        <option value="">Todos os segmentos</option>
         {cnaesUnicos
           .filter((c): c is string => typeof c === 'string')
           .map((cnae) => (
-            <option key={cnae} value={cnae}>
+            <option key={cnae} value={cnae} className=''>
               {CNAE_SEGMENTOS[cnae] || `CNAE ${cnae}`}
             </option>
           ))}
       </select>
-    </label>
+    </div>
   );
 }
