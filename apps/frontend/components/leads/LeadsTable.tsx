@@ -6,7 +6,8 @@ import { useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { clsx } from 'clsx'
 import { DISTRIBUIDORAS_MAP } from '@/utils/distribuidoras'
-import { ArrowUpRight, ChevronRight } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
+import { Tooltip } from '@/components/ui/Tooltip' // Assume you have a Tooltip component
 
 type Props = {
   rows: Lead[]
@@ -40,14 +41,15 @@ export default function LeadsTable({ rows }: Props) {
         <table className="w-full text-sm">
           <thead className="bg-zinc-800/80 backdrop-blur-sm">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-zinc-300 uppercase tracking-wider">ID</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-zinc-300 uppercase tracking-wider">DIC</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-zinc-300 uppercase tracking-wider">FIC</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-zinc-300 uppercase tracking-wider">CNAE</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-zinc-300 uppercase tracking-wider">Bairro</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-zinc-300 uppercase tracking-wider">Distribuidora</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-zinc-300 uppercase tracking-wider">Segmento</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-zinc-300 uppercase tracking-wider"></th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-zinc-300 uppercase tracking-wider w-[120px]">ID</th>
+              <th className="px-3 py-3 text-left text-xs font-medium text-zinc-300 uppercase tracking-wider w-[80px]">DIC</th>
+              <th className="px-3 py-3 text-left text-xs font-medium text-zinc-300 uppercase tracking-wider w-[80px]">FIC</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-zinc-300 uppercase tracking-wider w-[120px]">CNAE</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-zinc-300 uppercase tracking-wider w-[150px]">Bairro</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-zinc-300 uppercase tracking-wider w-[180px]">Distribuidora</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-zinc-300 uppercase tracking-wider w-[200px]">Segmento</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-zinc-300 uppercase tracking-wider w-[200px]">Descrição</th>
+              <th className="px-2 py-3 text-right text-xs font-medium text-zinc-300 uppercase tracking-wider w-[40px]"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-800">
@@ -63,14 +65,15 @@ export default function LeadsTable({ rows }: Props) {
                     : 'hover:bg-zinc-800/50'
                 )}
               >
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-4 py-3">
                   <div className="flex items-center">
                     <span className="font-mono text-xs bg-zinc-800/50 px-2 py-1 rounded">
                       {lead.id ? `${lead.id.slice(0, 8)}...` : '—'}
                     </span>
                   </div>
                 </td>
-                <td className="px-4 py-4 whitespace-nowrap">
+                
+                <td className="px-3 py-3">
                   <span className={clsx(
                     "px-2 py-1 rounded-full text-xs font-medium",
                     lead.dicMed ? (lead.dicMed > 3 ? 'bg-red-500/10 text-red-400' : 'bg-emerald-500/10 text-emerald-400') : 'bg-zinc-800/50 text-zinc-400'
@@ -78,7 +81,8 @@ export default function LeadsTable({ rows }: Props) {
                     {lead.dicMed?.toFixed(2) ?? '—'}
                   </span>
                 </td>
-                <td className="px-4 py-4 whitespace-nowrap">
+                
+                <td className="px-3 py-3">
                   <span className={clsx(
                     "px-2 py-1 rounded-full text-xs font-medium",
                     lead.ficMed ? (lead.ficMed > 10 ? 'bg-red-500/10 text-red-400' : 'bg-emerald-500/10 text-emerald-400') : 'bg-zinc-800/50 text-zinc-400'
@@ -86,21 +90,48 @@ export default function LeadsTable({ rows }: Props) {
                     {lead.ficMed?.toFixed(2) ?? '—'}
                   </span>
                 </td>
-                <td className="px-4 py-4 whitespace-nowrap max-w-[120px] truncate" title={lead.cnae}>
-                  {lead.cnae ?? '—'}
+                
+                <td className="px-4 py-3">
+                  <Tooltip content={lead.cnae || '—'}>
+                    <div className="max-w-[120px] truncate text-zinc-300">
+                      {lead.cnae ?? '—'}
+                    </div>
+                  </Tooltip>
                 </td>
-                <td className="px-4 py-4 whitespace-nowrap">
-                  {lead.bairro ?? '—'}
+                
+                <td className="px-4 py-3">
+                  <Tooltip content={lead.bairro || '—'}>
+                    <div className="max-w-[150px] truncate text-zinc-300">
+                      {lead.bairro ?? '—'}
+                    </div>
+                  </Tooltip>
                 </td>
-                <td className="px-4 py-4 whitespace-nowrap">
-                  <span className="inline-flex items-center gap-1">
-                    {DISTRIBUIDORAS_MAP[lead.distribuidora] ?? lead.distribuidora ?? '—'}
-                  </span>
+                
+                <td className="px-4 py-3">
+                  <Tooltip content={DISTRIBUIDORAS_MAP[lead.distribuidora] || lead.distribuidora || '—'}>
+                    <div className="max-w-[180px] truncate text-zinc-300">
+                      {DISTRIBUIDORAS_MAP[lead.distribuidora] ?? lead.distribuidora ?? '—'}
+                    </div>
+                  </Tooltip>
                 </td>
-                <td className="px-4 py-4 whitespace-nowrap max-w-[150px] truncate">
-                  {lead.segmento ?? '—'}
+                
+                <td className="px-4 py-3">
+                  <Tooltip content={lead.segmento || '—'}>
+                    <div className="max-w-[200px] truncate text-zinc-300">
+                      {lead.segmento ?? '—'}
+                    </div>
+                  </Tooltip>
                 </td>
-                <td className="px-4 py-4 text-right whitespace-nowrap">
+                
+                <td className="px-4 py-3">
+                  <Tooltip content={lead.descricao || '—'}>
+                    <div className="max-w-[200px] truncate text-zinc-300">
+                      {lead.descricao ?? '—'}
+                    </div>
+                  </Tooltip>
+                </td>
+                
+                <td className="px-2 py-3 text-right">
                   <div className="flex justify-end">
                     <button className="opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-white transition-opacity">
                       <ChevronRight className="w-4 h-4" />
@@ -113,7 +144,6 @@ export default function LeadsTable({ rows }: Props) {
         </table>
       </div>
       
-      {/* Footer with pagination would go here */}
       <div className="bg-zinc-800/50 px-6 py-3 text-xs text-zinc-400 border-t border-zinc-800">
         Mostrando {rows.length} {rows.length === 1 ? 'lead' : 'leads'}
       </div>
