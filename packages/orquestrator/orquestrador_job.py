@@ -55,7 +55,7 @@ def rodar_importer(script_path: str, gdb_path: Path, camada: str, distribuidora:
     else:
         tqdm.write(f"✅ {camada} {prefixo} importado com sucesso.")
 
-def main():
+def orquestrar_importacao():
     tqdm.write("📁 Iniciando orquestrador manual (mock)")
 
     for prefixo in PREFIXOS:
@@ -83,4 +83,4 @@ def main():
     tqdm.write("🏁 Orquestração mock finalizada.")
 
 if __name__ == "__main__":
-    main()
+    orquestrar_importacao()

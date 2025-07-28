@@ -8,6 +8,7 @@ from apps.api.schemas.lead_schema import (
     LeadList,
     LeadOut
 )
+import json
 
 # 🔢 Parser auxiliar para arrays de texto
 def parse_array_text(texto: str | None) -> list[float] | None:
@@ -63,14 +64,12 @@ async def buscar_leads(
     }
     order_clause = f"ORDER BY {ordenacoes.get(ordem, 'distribuidora_nome')}"
 
-    # Total de registros
     count_query = text(f"""
         SELECT COUNT(*) FROM intel_lead.vw_lead_completo_detalhado
         {where_clause}
     """)
     total = (await db.execute(count_query, params)).scalar_one()
 
-    # Consulta paginada
     query = text(f"""
         SELECT * FROM intel_lead.vw_lead_completo_detalhado
         {where_clause}
@@ -100,9 +99,11 @@ async def get_lead(db: AsyncSession, uc_id: str) -> LeadDetalhado | None:
 # 📉 Qualidade DIC/FIC
 async def get_qualidade(db: AsyncSession, uc_id: str) -> LeadQualidade | None:
     query = text("""
-        SELECT dic, fic
-        FROM intel_lead.lead_qualidade_mensal
-        WHERE uc_id = :uc_id
+        SELECT qm.dic, qm.fic
+        FROM intel_lead.lead_qualidade_mensal qm
+        JOIN intel_lead.lead_bruto lb ON lb.id = qm.lead_bruto_id
+        WHERE lb.uc_id = :uc_id
+        LIMIT 1
     """)
     result = await db.execute({"uc_id": uc_id})
     row = result.mappings().first()
@@ -140,7 +141,8 @@ async def get_map_points(
         "distribuidora": distribuidora,
         "limit": limit
     })
-    return [LeadMapOut(**row._mapping) for row in result]
+    rows = result.mappings().all()
+    return [LeadMapOut(**row) for row in rows]
 
 
 # 🔥 Heatmap
@@ -180,4 +182,11 @@ async def get_resumo(
         "segmento": segmento
     })
     row = result.mappings().first()
-    return LeadResumo(**row)
+
+    return LeadResumo(
+        total_leads=row["total_leads"],
+        total_com_cnpj=row["total_com_cnpj"],
+        total_enriquecidos=row["total_enriquecidos"],
+        media_potencia=row["media_potencia"],
+        por_classe=json.loads(row["por_classe"]) if row["por_classe"] else {}
+    )

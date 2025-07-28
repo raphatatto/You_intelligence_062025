@@ -1,0 +1,22 @@
+[
+  {
+    "nome": "lead_com_coordenadas",
+    "definicao": " SELECT lb.uc_id,\n    lb.latitude,\n    lb.longitude,\n    lb.classe,\n    lb.grupo_tensao,\n    lb.pac,\n    d.nome AS distribuidora_nome,\n    lb.status,\n    s.descricao AS segmento_desc\n   FROM ((lead_bruto lb\n     LEFT JOIN distribuidora d ON ((d.id = lb.distribuidora_id)))\n     LEFT JOIN segmento_mercado s ON ((s.id = lb.segmento)))\n  WHERE ((lb.latitude IS NOT NULL) AND (lb.longitude IS NOT NULL));"
+  },
+  {
+    "nome": "vw_lead_com_cnae_desc",
+    "definicao": " SELECT lb.uc_id,\n    lb.import_id,\n    lb.cod_id,\n    lb.distribuidora_id,\n    lb.origem,\n    lb.ano,\n    lb.status,\n    lb.data_conexao,\n    lb.cnae,\n    lb.grupo_tensao,\n    lb.modalidade,\n    lb.tipo_sistema,\n    lb.situacao,\n    lb.classe,\n    lb.segmento,\n    lb.subestacao,\n    lb.municipio_id,\n    lb.bairro,\n    lb.cep,\n    lb.pac,\n    lb.pn_con,\n    lb.descricao,\n    lb.latitude,\n    lb.longitude,\n    lb.created_at,\n    lb.updated_at,\n    lb.id,\n    c.descricao AS cnae_descricao,\n    s.descricao AS segmento_desc\n   FROM ((lead_bruto lb\n     LEFT JOIN cnae c ON (((c.id)::text = (lb.cnae)::text)))\n     LEFT JOIN segmento_mercado s ON ((s.id = lb.segmento)));"
+  },
+  {
+    "nome": "vw_lead_energia",
+    "definicao": " SELECT lead_bruto_id,\n    round((avg(energia_total))::numeric, 2) AS media_energia_total,\n    round((sum(energia_total))::numeric, 2) AS total_energia_anual\n   FROM lead_energia_mensal\n  GROUP BY lead_bruto_id;"
+  },
+  {
+    "nome": "vw_lead_demanda",
+    "definicao": " SELECT lead_bruto_id,\n    round((avg(demanda_total))::numeric, 2) AS media_demanda_total,\n    round((sum(demanda_total))::numeric, 2) AS total_demanda_anual\n   FROM lead_demanda_mensal\n  GROUP BY lead_bruto_id;"
+  },
+  {
+    "nome": "vw_lead_qualidade",
+    "definicao": " SELECT lead_bruto_id,\n    round((avg(dic))::numeric, 2) AS media_dic,\n    round((avg(fic))::numeric, 2) AS media_fic,\n    round((sum(dic))::numeric, 2) AS total_dic,\n    round((sum(fic))::numeric, 2) AS total_fic,\n    round((sum(dic))::numeric, 2) AS soma_horas_sem_rede\n   FROM lead_qualidade_mensal\n  GROUP BY lead_bruto_id;"
+  }
+]

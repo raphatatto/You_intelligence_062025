@@ -1,0 +1,43 @@
+Schema,Tabela/View,Tipo
+intel_lead,classe_consumo,BASE TABLE
+intel_lead,cnae,BASE TABLE
+intel_lead,dashboard_status_leads,VIEW
+intel_lead,dataset_url_catalog,BASE TABLE
+intel_lead,distribuidora,BASE TABLE
+intel_lead,distribuidora_view,VIEW
+intel_lead,download_log,BASE TABLE
+intel_lead,grupo_tensao,BASE TABLE
+intel_lead,import_status,BASE TABLE
+intel_lead,lead_bruto,BASE TABLE
+intel_lead,lead_com_coordenadas,VIEW
+intel_lead,lead_demanda_mensal,BASE TABLE
+intel_lead,lead_energia_mensal,BASE TABLE
+intel_lead,lead_enrichment_log,BASE TABLE
+intel_lead,lead_qualidade_mensal,BASE TABLE
+intel_lead,modalidade_tarifaria,BASE TABLE
+intel_lead,municipio,BASE TABLE
+intel_lead,ponto_notavel,BASE TABLE
+intel_lead,segmento_mercado,BASE TABLE
+intel_lead,situacao_uc,BASE TABLE
+intel_lead,tipo_sistema,BASE TABLE
+intel_lead,vw_distribuidora_status,VIEW
+intel_lead,vw_import_status_resumido,VIEW
+intel_lead,vw_import_status_resumo,VIEW
+intel_lead,vw_lead_com_cnae_desc,VIEW
+intel_lead,vw_lead_com_coordenadas,VIEW
+intel_lead,vw_lead_completo_detalhado,VIEW
+intel_lead,vw_lead_demanda_agg,VIEW
+intel_lead,vw_lead_energia_agg,VIEW
+intel_lead,vw_lead_enrichment_status,VIEW
+intel_lead,vw_lead_enriquecido_resumido,VIEW
+intel_lead,vw_lead_qualidade_agg,VIEW
+intel_lead,vw_lead_status_enriquecimento,VIEW
+intel_lead,vw_leads_prioritarios_enriquecimento,VIEW
+lead,cnae_ref,BASE TABLE
+lead,geo_info_lead,BASE TABLE
+lead,info_leads,BASE TABLE
+lead,lead,BASE TABLE
+lead,lead_demanda,BASE TABLE
+lead,lead_energia,BASE TABLE
+lead,lead_qualidade,BASE TABLE
+lead,unidade_consumidora,BASE TABLE
