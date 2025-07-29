@@ -35,7 +35,7 @@ export default function Sidebar() {
 
   return (
     <aside className={clsx(
-      "fixed inset-y-0 left-0 bg-gray-900 text-white flex flex-col border-r border-gray-800 transition-all duration-300 z-50",
+      "fixed inset-y-0 left-0 bg-black text-white flex flex-col border-r border-gray-800 transition-all duration-300 z-50",
       collapsed ? "w-20" : "w-64"
     )}>
       {/* Topo com logo */}
