@@ -65,13 +65,13 @@ async def buscar_leads(
     order_clause = f"ORDER BY {ordenacoes.get(ordem, 'distribuidora_nome')}"
 
     count_query = text(f"""
-        SELECT COUNT(*) FROM intel_lead.vw_lead_completo_detalhado
+        SELECT COUNT(*) FROM intel_lead.mv_lead_completo_detalhado
         {where_clause}
     """)
     total = (await db.execute(count_query, params)).scalar_one()
 
     query = text(f"""
-        SELECT * FROM intel_lead.vw_lead_completo_detalhado
+        SELECT * FROM intel_lead.mv_lead_completo_detalhado
         {where_clause}
         {order_clause}
         OFFSET :skip LIMIT :limit
@@ -88,9 +88,11 @@ async def buscar_leads(
 # 📋 Detalhamento individual
 async def get_lead(db: AsyncSession, uc_id: str) -> LeadDetalhado | None:
     query = text("""
-        SELECT * FROM intel_lead.vw_lead_com_cnae_desc
-        WHERE uc_id = :uc_id
-    """)
+    SELECT * 
+    FROM intel_lead.mv_lead_completo_detalhado
+    WHERE uc_id = :uc_id
+""")
+
     result = await db.execute(query, {"uc_id": uc_id})
     row = result.mappings().first()
     return LeadDetalhado(**row) if row else None
