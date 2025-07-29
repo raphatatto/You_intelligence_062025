@@ -5,11 +5,18 @@ from apps.api.schemas.lead_schema import LeadGeoOut
 async def buscar_top_leads_geo(db: AsyncSession, limit: int = 300) -> list[LeadGeoOut]:
     query = text("""
         SELECT 
-            lb.cod_id, lb.brr as bairro, lb.cep, lb.descr, lb.cnae, 
-            m.uf as estado, lb.tipo_sistema_desc as tipo, 
-            lb.latitude_final as latitude, lb.longitude_final as longitude, 
-            lb.dist as dist,
-            q.dic_med, q.fic_med,
+            lb.uc_id,
+            lb.bairro,
+            lb.cep,
+            lb.descricao AS descr,
+            lb.cnae,
+            m.uf AS estado,
+            lb.tipo_sistema,
+            lb.latitude,
+            lb.longitude,
+            lb.distribuidora_nome AS dist,
+            q.media_dic AS dic_med,
+            q.media_fic AS fic_med,
             em.ene_01, em.ene_02, em.ene_03, em.ene_04, em.ene_05, em.ene_06,
             em.ene_07, em.ene_08, em.ene_09, em.ene_10, em.ene_11, em.ene_12,
             dm.dem_01, dm.dem_02, dm.dem_03, dm.dem_04, dm.dem_05, dm.dem_06,
@@ -24,9 +31,10 @@ async def buscar_top_leads_geo(db: AsyncSession, limit: int = 300) -> list[LeadG
         LEFT JOIN intel_lead.lead_qualidade_mensal qm ON qm.lead_bruto_id = lb.id
         LEFT JOIN intel_lead.lead_qualidade q ON q.lead_bruto_id = lb.id
         LEFT JOIN intel_lead.municipio m ON m.id = lb.municipio_id
-        WHERE lb.latitude_final IS NOT NULL 
-          AND lb.longitude_final IS NOT NULL
+        WHERE lb.latitude IS NOT NULL 
+          AND lb.longitude IS NOT NULL
         LIMIT :limit
     """)
     result = await db.execute(query, {"limit": limit})
-    return [LeadGeoOut(**dict(row)) for row in result.fetchall()]
+    rows = result.mappings().all()
+    return [LeadGeoOut(**row) for row in rows]

@@ -11,7 +11,7 @@ from apps.api.schemas.lead_schema import (
     LeadList
 )
 
-from apps.api.services.lead_service import (
+from apps.api.services.lead.lead_service import (
     buscar_leads,
     get_lead,
     get_resumo,
