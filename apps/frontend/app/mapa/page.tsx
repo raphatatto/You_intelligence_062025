@@ -17,6 +17,8 @@ export default function MapaPage() {
     setDistribuidora,
     segmento,
     clearFilters,
+    tipo,
+    setTipo,
   } = useFilters()
 
   const { order } = useSort()
@@ -27,7 +29,8 @@ export default function MapaPage() {
 
   const rows = (() => {
     let arr = leads
-
+    if (tipo)
+      arr = arr.filter((l) => l.tipo === tipo)
     if (estado) {
       arr = arr.filter((l) => l.estado === estado)
     }
@@ -95,6 +98,18 @@ export default function MapaPage() {
                 ))}
               </select>
             </div>
+            <div className="space-y-1">
+  <label className="text-xs text-zinc-400">Tipo</label>
+  <select
+    value={tipo}
+    onChange={(e) => setTipo(e.target.value)}
+    className="w-full bg-zinc-800 text-sm text-white border border-zinc-700 px-3 py-2 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+  >
+    <option value="">Todos os tipos</option>
+    <option value="ucmt">UCMT</option>
+    <option value="ucbt">UCBT</option>
+  </select>
+</div>
 
             {/* Distribuidora */}
             <div className="space-y-1">
