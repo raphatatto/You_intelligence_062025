@@ -1,0 +1,66 @@
+[
+  {
+    "nome": "vw_lead_completo_detalhado",
+    "definicao": " SELECT lb.uc_id,\n    lb.classe,\n    lb.grupo_tensao,\n    lb.modalidade,\n    m.uf AS estado,\n    m.nome AS municipio,\n    d.nome AS distribuidora_nome,\n    lb.pac,\n    lb.latitude,\n    lb.longitude,\n    s.descricao AS segmento_desc,\n    lb.status,\n    qa.media_dic,\n    qa.media_fic\n   FROM ((((lead_bruto lb\n     LEFT JOIN municipio m ON ((m.id = lb.municipio_id)))\n     LEFT JOIN distribuidora d ON ((d.id = lb.distribuidora_id)))\n     LEFT JOIN segmento_mercado s ON ((s.id = lb.segmento)))\n     LEFT JOIN vw_lead_qualidade_agg qa ON ((qa.lead_bruto_id = lb.id)));"
+  },
+  {
+    "nome": "lead_qualidade",
+    "definicao": " SELECT lead_bruto_id,\n    round((avg(dic))::numeric, 2) AS dic_med,\n    round((avg(fic))::numeric, 2) AS fic_med\n   FROM lead_qualidade_mensal\n  GROUP BY lead_bruto_id;"
+  },
+  {
+    "nome": "dashboard_status_leads",
+    "definicao": " SELECT status,\n    count(*) AS total\n   FROM lead_bruto\n  GROUP BY status;"
+  },
+  {
+    "nome": "vw_lead_enriquecido_resumido",
+    "definicao": " SELECT lb.id AS lead_bruto_id,\n    lb.uc_id,\n    lb.cod_id,\n    lb.ano,\n    lb.status,\n    lb.data_conexao,\n    d.nome_comum AS distribuidora,\n    m.nome AS municipio,\n    m.uf,\n    lb.cep,\n    lb.bairro,\n    lb.latitude,\n    lb.longitude,\n    le.energia_total,\n    ld.demanda_total,\n    lq.dic,\n    lq.fic\n   FROM (((((lead_bruto lb\n     LEFT JOIN distribuidora d ON ((lb.distribuidora_id = d.id)))\n     LEFT JOIN municipio m ON ((lb.municipio_id = m.id)))\n     LEFT JOIN lead_energia_mensal le ON (((le.lead_bruto_id = lb.id) AND (le.mes = 12))))\n     LEFT JOIN lead_demanda_mensal ld ON (((ld.lead_bruto_id = lb.id) AND (ld.mes = 12))))\n     LEFT JOIN lead_qualidade_mensal lq ON (((lq.lead_bruto_id = lb.id) AND (lq.mes = 12))));"
+  },
+  {
+    "nome": "vw_import_status_resumo",
+    "definicao": " SELECT i.import_id,\n    d.nome_comum AS distribuidora,\n    i.ano,\n    i.camada,\n    i.status,\n    i.linhas_processadas,\n    i.data_inicio,\n    i.data_fim,\n    i.erro\n   FROM (import_status i\n     JOIN distribuidora d ON ((d.id = i.distribuidora_id)));"
+  },
+  {
+    "nome": "vw_lead_enrichment_status",
+    "definicao": " SELECT l.id AS lead_bruto_id,\n    l.uc_id,\n    max(e.etapa) AS ultima_etapa,\n    max(e.executado_em) AS ultima_execucao,\n    max(e.resultado) FILTER (WHERE (e.executado_em = ( SELECT max(e2.executado_em) AS max\n           FROM lead_enrichment_log e2\n          WHERE (e2.lead_bruto_id = e.lead_bruto_id)))) AS resultado\n   FROM (lead_bruto l\n     LEFT JOIN lead_enrichment_log e ON ((l.id = e.lead_bruto_id)))\n  GROUP BY l.id, l.uc_id;"
+  },
+  {
+    "nome": "vw_distribuidora_status",
+    "definicao": " SELECT d.id,\n    d.nome,\n    count(*) FILTER (WHERE (s.status = 'completed'::status_enum)) AS imports_ok,\n    count(*) FILTER (WHERE (s.status = 'failed'::status_enum)) AS imports_falha,\n    max(s.data_fim) AS ultima_importacao\n   FROM (distribuidora d\n     LEFT JOIN import_status s ON ((s.distribuidora_id = d.id)))\n  GROUP BY d.id, d.nome;"
+  },
+  {
+    "nome": "vw_lead_status_enriquecimento",
+    "definicao": " SELECT lb.uc_id,\n    count(log.*) AS total_logs,\n    max(log.resultado) AS resultado_atual,\n    max(log.executado_em) AS ultima_execucao\n   FROM (lead_bruto lb\n     LEFT JOIN lead_enrichment_log log ON ((log.lead_bruto_id = lb.id)))\n  GROUP BY lb.uc_id;"
+  },
+  {
+    "nome": "vw_lead_demanda_agg",
+    "definicao": " SELECT lead_bruto_id,\n    round((avg(demanda_ponta))::numeric, 2) AS media_demanda_ponta,\n    round((sum(demanda_ponta))::numeric, 2) AS total_demanda_ponta,\n    round((avg(demanda_fora_ponta))::numeric, 2) AS media_demanda_fora_ponta,\n    round((sum(demanda_fora_ponta))::numeric, 2) AS total_demanda_fora_ponta,\n    round((avg(demanda_contratada))::numeric, 2) AS media_contratada,\n    round((sum(demanda_contratada))::numeric, 2) AS total_contratada,\n    round((avg(demanda_total))::numeric, 2) AS media_demanda_total,\n    round((sum(demanda_total))::numeric, 2) AS total_demanda_total\n   FROM lead_demanda_mensal\n  GROUP BY lead_bruto_id;"
+  },
+  {
+    "nome": "vw_lead_com_coordenadas",
+    "definicao": " SELECT l.uc_id,\n    l.import_id,\n    l.cod_id,\n    l.distribuidora_id,\n    l.origem,\n    l.ano,\n    l.status,\n    l.data_conexao,\n    l.cnae,\n    l.grupo_tensao,\n    l.modalidade,\n    l.tipo_sistema,\n    l.situacao,\n    l.classe,\n    l.segmento,\n    l.subestacao,\n    l.municipio_id,\n    l.bairro,\n    l.cep,\n    l.pac,\n    l.pn_con,\n    l.descricao,\n    l.latitude,\n    l.longitude,\n    l.created_at,\n    l.updated_at,\n    l.id,\n    COALESCE(l.latitude, p.latitude) AS latitude_final,\n    COALESCE(l.longitude, p.longitude) AS longitude_final\n   FROM (lead_bruto l\n     LEFT JOIN ponto_notavel p ON ((l.pn_con = p.pn_id)));"
+  },
+  {
+    "nome": "vw_lead_qualidade_agg",
+    "definicao": " SELECT lead_bruto_id,\n    round((avg(dic))::numeric, 2) AS media_dic,\n    round((avg(fic))::numeric, 2) AS media_fic,\n    round((sum(sem_rede))::numeric, 2) AS total_horas_sem_rede\n   FROM lead_qualidade_mensal\n  GROUP BY lead_bruto_id;"
+  },
+  {
+    "nome": "vw_lead_energia_agg",
+    "definicao": " SELECT lead_bruto_id,\n    round((avg(energia_ponta))::numeric, 2) AS media_energia_ponta,\n    round((sum(energia_ponta))::numeric, 2) AS total_energia_ponta,\n    round((avg(energia_fora_ponta))::numeric, 2) AS media_energia_fora_ponta,\n    round((sum(energia_fora_ponta))::numeric, 2) AS total_energia_fora_ponta,\n    round((avg(energia_total))::numeric, 2) AS media_energia_total,\n    round((sum(energia_total))::numeric, 2) AS total_energia_total\n   FROM lead_energia_mensal\n  GROUP BY lead_bruto_id;"
+  },
+  {
+    "nome": "vw_leads_prioritarios_enriquecimento",
+    "definicao": " WITH medias AS (\n         SELECT lb_1.id AS lead_id,\n            (avg(em.energia_total))::numeric AS media_energia_total,\n            (avg(dm.demanda_total))::numeric AS media_demanda_total,\n            (avg(dm.demanda_contratada))::numeric AS media_demanda_contratada,\n            (avg(qm.dic))::numeric AS media_dic,\n            (avg(qm.fic))::numeric AS media_fic,\n            (max(qm.sem_rede) > (0)::double precision) AS sem_rede,\n            max(lb_1.modalidade) AS modalidade_tarifaria\n           FROM (((lead_bruto lb_1\n             LEFT JOIN lead_energia_mensal em ON ((em.lead_bruto_id = lb_1.id)))\n             LEFT JOIN lead_demanda_mensal dm ON ((dm.lead_bruto_id = lb_1.id)))\n             LEFT JOIN lead_qualidade_mensal qm ON ((qm.lead_bruto_id = lb_1.id)))\n          WHERE ((lb_1.origem = ANY (ARRAY['UCMT'::origem_enum, 'UCBT'::origem_enum])) AND (lb_1.situacao = 'ATIVA'::text) AND (lb_1.cnae IS NOT NULL))\n          GROUP BY lb_1.id\n        )\n SELECT m.lead_id,\n    m.media_energia_total,\n    m.media_demanda_total,\n    m.media_demanda_contratada,\n    m.media_dic,\n    m.media_fic,\n    m.sem_rede,\n    m.modalidade_tarifaria,\n    lb.cnae,\n    lb.status,\n    lb.origem,\n    p.latitude,\n    p.longitude,\n    (((((\n        CASE\n            WHEN (m.media_energia_total > (100000)::numeric) THEN 3\n            ELSE 0\n        END +\n        CASE\n            WHEN (m.media_demanda_contratada > (500)::numeric) THEN 2\n            ELSE 0\n        END) +\n        CASE\n            WHEN (m.media_dic >= (30)::numeric) THEN 2\n            ELSE 0\n        END) +\n        CASE\n            WHEN (m.media_fic >= (10)::numeric) THEN 2\n            ELSE 0\n        END) +\n        CASE\n            WHEN m.sem_rede THEN 2\n            ELSE 0\n        END) +\n        CASE\n            WHEN (m.modalidade_tarifaria = ANY (ARRAY['Horo Sazonal'::text, 'HORO_SAZ'::text, 'HORO SAZ'::text])) THEN 1\n            ELSE 0\n        END) AS score_potencial\n   FROM ((medias m\n     JOIN lead_bruto lb ON ((lb.id = m.lead_id)))\n     LEFT JOIN ponto_notavel p ON ((lb.pn_con = p.pn_id)))\n  WHERE (lb.status = 'raw'::text)\n  ORDER BY (((((\n        CASE\n            WHEN (m.media_energia_total > (100000)::numeric) THEN 3\n            ELSE 0\n        END +\n        CASE\n            WHEN (m.media_demanda_contratada > (500)::numeric) THEN 2\n            ELSE 0\n        END) +\n        CASE\n            WHEN (m.media_dic >= (30)::numeric) THEN 2\n            ELSE 0\n        END) +\n        CASE\n            WHEN (m.media_fic >= (10)::numeric) THEN 2\n            ELSE 0\n        END) +\n        CASE\n            WHEN m.sem_rede THEN 2\n            ELSE 0\n        END) +\n        CASE\n            WHEN (m.modalidade_tarifaria = ANY (ARRAY['Horo Sazonal'::text, 'HORO_SAZ'::text, 'HORO SAZ'::text])) THEN 1\n            ELSE 0\n        END) DESC;"
+  },
+  {
+    "nome": "vw_import_status_resumido",
+    "definicao": " SELECT ano,\n    camada,\n    status,\n    count(*) AS total\n   FROM import_status\n  GROUP BY ano, camada, status;"
+  },
+  {
+    "nome": "distribuidora_view",
+    "definicao": " SELECT id,\n    nome AS nome_oficial,\n    nome_comum AS nome_usual\n   FROM distribuidora\n  ORDER BY nome_comum;"
+  },
+  {
+    "nome": "lead_com_coordenadas",
+    "definicao": " SELECT lb.uc_id,\n    lb.latitude,\n    lb.longitude,\n    lb.classe,\n    lb.grupo_tensao,\n    lb.pac,\n    d.nome AS distribuidora_nome,\n    lb.status\n   FROM (lead_bruto lb\n     LEFT JOIN distribuidora d ON ((d.id = lb.distribuidora_id)))\n  WHERE ((lb.latitude IS NOT NULL) AND (lb.longitude IS NOT NULL));"
+  }
+]
