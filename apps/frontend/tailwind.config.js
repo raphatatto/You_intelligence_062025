@@ -11,9 +11,10 @@ module.exports = {
 ],
   theme: {
     extend: {
-      maxWidth:{
-        'container': '77.5rem'
-      }
+      colors: {
+        primary: '#00ff00',
+        secondary: '#00cc00',
+      },
     },
   },
   plugins: [],

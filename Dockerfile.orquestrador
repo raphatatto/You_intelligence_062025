@@ -10,8 +10,8 @@ RUN apt-get update && apt-get install -y \
 # Copia todo o projeto para o container
 COPY . .
 
-# Instala as dependências Python
-RUN pip install --upgrade pip && pip install -r requirements.txt
+# Instala as dependências Python a partir do lugar correto
+RUN pip install --upgrade pip && pip install -r packages/requirements.txt
 
 # Comando padrão: roda o orquestrador automaticamente
 CMD ["python", "packages/orquestrator/orquestrador_job.py"]

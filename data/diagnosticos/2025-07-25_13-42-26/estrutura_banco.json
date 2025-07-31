@@ -1,0 +1,1096 @@
+{
+  "tabelas": {
+    "ponto_notavel": {
+      "colunas": [
+        {
+          "nome": "pn_id",
+          "tipo": "text",
+          "nulo": false
+        },
+        {
+          "nome": "latitude",
+          "tipo": "double precision",
+          "nulo": true
+        },
+        {
+          "nome": "longitude",
+          "tipo": "double precision",
+          "nulo": true
+        },
+        {
+          "nome": "distribuidora_id",
+          "tipo": "text",
+          "nulo": false
+        },
+        {
+          "nome": "ano",
+          "tipo": "integer",
+          "nulo": false
+        }
+      ],
+      "primary_keys": [
+        "pn_id",
+        "distribuidora_id",
+        "ano"
+      ],
+      "foreign_keys": [],
+      "indices": [
+        {
+          "nome": "idx_ponto_notavel_combo",
+          "definicao": "CREATE INDEX idx_ponto_notavel_combo ON intel_lead.ponto_notavel USING btree (distribuidora_id, ano, pn_id)"
+        },
+        {
+          "nome": "ponto_notavel_pkey",
+          "definicao": "CREATE UNIQUE INDEX ponto_notavel_pkey ON intel_lead.ponto_notavel USING btree (pn_id, distribuidora_id, ano)"
+        }
+      ],
+      "linhas": 3908518
+    },
+    "lead_energia_mensal": {
+      "colunas": [
+        {
+          "nome": "id",
+          "tipo": "uuid",
+          "nulo": false
+        },
+        {
+          "nome": "lead_bruto_id",
+          "tipo": "uuid",
+          "nulo": false
+        },
+        {
+          "nome": "mes",
+          "tipo": "integer",
+          "nulo": true
+        },
+        {
+          "nome": "energia_ponta",
+          "tipo": "double precision",
+          "nulo": true
+        },
+        {
+          "nome": "energia_fora_ponta",
+          "tipo": "double precision",
+          "nulo": true
+        },
+        {
+          "nome": "energia_total",
+          "tipo": "double precision",
+          "nulo": true
+        },
+        {
+          "nome": "origem",
+          "tipo": "USER-DEFINED",
+          "nulo": false
+        },
+        {
+          "nome": "import_id",
+          "tipo": "text",
+          "nulo": true
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [
+        {
+          "coluna": "lead_bruto_id",
+          "referencia": "lead_bruto.id"
+        },
+        {
+          "coluna": "import_id",
+          "referencia": "import_status.import_id"
+        }
+      ],
+      "indices": [
+        {
+          "nome": "lead_energia_mensal_pkey",
+          "definicao": "CREATE UNIQUE INDEX lead_energia_mensal_pkey ON intel_lead.lead_energia_mensal USING btree (id)"
+        },
+        {
+          "nome": "idx_energia_lead_id",
+          "definicao": "CREATE INDEX idx_energia_lead_id ON intel_lead.lead_energia_mensal USING btree (lead_bruto_id)"
+        },
+        {
+          "nome": "idx_energia_mes",
+          "definicao": "CREATE INDEX idx_energia_mes ON intel_lead.lead_energia_mensal USING btree (mes)"
+        }
+      ],
+      "linhas": 657816
+    },
+    "lead_qualidade_mensal": {
+      "colunas": [
+        {
+          "nome": "id",
+          "tipo": "uuid",
+          "nulo": false
+        },
+        {
+          "nome": "lead_bruto_id",
+          "tipo": "uuid",
+          "nulo": false
+        },
+        {
+          "nome": "mes",
+          "tipo": "integer",
+          "nulo": true
+        },
+        {
+          "nome": "dic",
+          "tipo": "double precision",
+          "nulo": true
+        },
+        {
+          "nome": "fic",
+          "tipo": "double precision",
+          "nulo": true
+        },
+        {
+          "nome": "sem_rede",
+          "tipo": "double precision",
+          "nulo": true
+        },
+        {
+          "nome": "origem",
+          "tipo": "USER-DEFINED",
+          "nulo": false
+        },
+        {
+          "nome": "import_id",
+          "tipo": "text",
+          "nulo": true
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [
+        {
+          "coluna": "lead_bruto_id",
+          "referencia": "lead_bruto.id"
+        },
+        {
+          "coluna": "import_id",
+          "referencia": "import_status.import_id"
+        }
+      ],
+      "indices": [
+        {
+          "nome": "lead_qualidade_mensal_pkey",
+          "definicao": "CREATE UNIQUE INDEX lead_qualidade_mensal_pkey ON intel_lead.lead_qualidade_mensal USING btree (id)"
+        },
+        {
+          "nome": "idx_qualidade_lead_id",
+          "definicao": "CREATE INDEX idx_qualidade_lead_id ON intel_lead.lead_qualidade_mensal USING btree (lead_bruto_id)"
+        }
+      ],
+      "linhas": 657816
+    },
+    "lead_demanda_mensal": {
+      "colunas": [
+        {
+          "nome": "id",
+          "tipo": "uuid",
+          "nulo": false
+        },
+        {
+          "nome": "lead_bruto_id",
+          "tipo": "uuid",
+          "nulo": false
+        },
+        {
+          "nome": "mes",
+          "tipo": "integer",
+          "nulo": true
+        },
+        {
+          "nome": "demanda_ponta",
+          "tipo": "double precision",
+          "nulo": true
+        },
+        {
+          "nome": "demanda_fora_ponta",
+          "tipo": "double precision",
+          "nulo": true
+        },
+        {
+          "nome": "demanda_total",
+          "tipo": "double precision",
+          "nulo": true
+        },
+        {
+          "nome": "demanda_contratada",
+          "tipo": "double precision",
+          "nulo": true
+        },
+        {
+          "nome": "origem",
+          "tipo": "USER-DEFINED",
+          "nulo": false
+        },
+        {
+          "nome": "import_id",
+          "tipo": "text",
+          "nulo": true
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [
+        {
+          "coluna": "lead_bruto_id",
+          "referencia": "lead_bruto.id"
+        },
+        {
+          "coluna": "import_id",
+          "referencia": "import_status.import_id"
+        }
+      ],
+      "indices": [
+        {
+          "nome": "lead_demanda_mensal_pkey",
+          "definicao": "CREATE UNIQUE INDEX lead_demanda_mensal_pkey ON intel_lead.lead_demanda_mensal USING btree (id)"
+        },
+        {
+          "nome": "idx_demanda_lead_id",
+          "definicao": "CREATE INDEX idx_demanda_lead_id ON intel_lead.lead_demanda_mensal USING btree (lead_bruto_id)"
+        }
+      ],
+      "linhas": 657816
+    },
+    "lead_enrichment_log": {
+      "colunas": [
+        {
+          "nome": "id",
+          "tipo": "uuid",
+          "nulo": false
+        },
+        {
+          "nome": "lead_bruto_id",
+          "tipo": "uuid",
+          "nulo": false
+        },
+        {
+          "nome": "etapa",
+          "tipo": "text",
+          "nulo": true
+        },
+        {
+          "nome": "resultado",
+          "tipo": "USER-DEFINED",
+          "nulo": true
+        },
+        {
+          "nome": "detalhes",
+          "tipo": "text",
+          "nulo": true
+        },
+        {
+          "nome": "executado_em",
+          "tipo": "timestamp without time zone",
+          "nulo": true
+        },
+        {
+          "nome": "tentativas",
+          "tipo": "integer",
+          "nulo": true
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [
+        {
+          "coluna": "lead_bruto_id",
+          "referencia": "lead_bruto.id"
+        }
+      ],
+      "indices": [
+        {
+          "nome": "lead_enrichment_log_pkey",
+          "definicao": "CREATE UNIQUE INDEX lead_enrichment_log_pkey ON intel_lead.lead_enrichment_log USING btree (id)"
+        },
+        {
+          "nome": "idx_enrichment_log_lead_etapa",
+          "definicao": "CREATE INDEX idx_enrichment_log_lead_etapa ON intel_lead.lead_enrichment_log USING btree (lead_bruto_id, etapa)"
+        }
+      ],
+      "linhas": 0
+    },
+    "modalidade_tarifaria": {
+      "colunas": [
+        {
+          "nome": "id",
+          "tipo": "text",
+          "nulo": false
+        },
+        {
+          "nome": "descricao",
+          "tipo": "text",
+          "nulo": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [],
+      "indices": [
+        {
+          "nome": "modalidade_tarifaria_pkey",
+          "definicao": "CREATE UNIQUE INDEX modalidade_tarifaria_pkey ON intel_lead.modalidade_tarifaria USING btree (id)"
+        }
+      ],
+      "linhas": 16
+    },
+    "tipo_sistema": {
+      "colunas": [
+        {
+          "nome": "id",
+          "tipo": "text",
+          "nulo": false
+        },
+        {
+          "nome": "descricao",
+          "tipo": "text",
+          "nulo": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [],
+      "indices": [
+        {
+          "nome": "tipo_sistema_pkey",
+          "definicao": "CREATE UNIQUE INDEX tipo_sistema_pkey ON intel_lead.tipo_sistema USING btree (id)"
+        }
+      ],
+      "linhas": 8
+    },
+    "situacao_uc": {
+      "colunas": [
+        {
+          "nome": "id",
+          "tipo": "text",
+          "nulo": false
+        },
+        {
+          "nome": "descricao",
+          "tipo": "text",
+          "nulo": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [],
+      "indices": [
+        {
+          "nome": "situacao_uc_pkey",
+          "definicao": "CREATE UNIQUE INDEX situacao_uc_pkey ON intel_lead.situacao_uc USING btree (id)"
+        }
+      ],
+      "linhas": 12
+    },
+    "classe_consumo": {
+      "colunas": [
+        {
+          "nome": "id",
+          "tipo": "text",
+          "nulo": false
+        },
+        {
+          "nome": "descricao",
+          "tipo": "text",
+          "nulo": false
+        },
+        {
+          "nome": "tipo_cliente",
+          "tipo": "text",
+          "nulo": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [],
+      "indices": [
+        {
+          "nome": "classe_consumo_pkey",
+          "definicao": "CREATE UNIQUE INDEX classe_consumo_pkey ON intel_lead.classe_consumo USING btree (id)"
+        }
+      ],
+      "linhas": 16
+    },
+    "distribuidora": {
+      "colunas": [
+        {
+          "nome": "id",
+          "tipo": "integer",
+          "nulo": false
+        },
+        {
+          "nome": "nome",
+          "tipo": "text",
+          "nulo": false
+        },
+        {
+          "nome": "nome_comum",
+          "tipo": "text",
+          "nulo": true
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [],
+      "indices": [
+        {
+          "nome": "distribuidora_pkey",
+          "definicao": "CREATE UNIQUE INDEX distribuidora_pkey ON intel_lead.distribuidora USING btree (id)"
+        }
+      ],
+      "linhas": 114
+    },
+    "segmento_mercado": {
+      "colunas": [
+        {
+          "nome": "id",
+          "tipo": "text",
+          "nulo": false
+        },
+        {
+          "nome": "descricao",
+          "tipo": "text",
+          "nulo": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [],
+      "indices": [
+        {
+          "nome": "segmento_mercado_pkey",
+          "definicao": "CREATE UNIQUE INDEX segmento_mercado_pkey ON intel_lead.segmento_mercado USING btree (id)"
+        }
+      ],
+      "linhas": 7
+    },
+    "municipio": {
+      "colunas": [
+        {
+          "nome": "id",
+          "tipo": "integer",
+          "nulo": false
+        },
+        {
+          "nome": "nome",
+          "tipo": "text",
+          "nulo": false
+        },
+        {
+          "nome": "uf",
+          "tipo": "character",
+          "nulo": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [],
+      "indices": [
+        {
+          "nome": "municipio_pkey",
+          "definicao": "CREATE UNIQUE INDEX municipio_pkey ON intel_lead.municipio USING btree (id)"
+        }
+      ],
+      "linhas": 5571
+    },
+    "lead_bruto": {
+      "colunas": [
+        {
+          "nome": "uc_id",
+          "tipo": "text",
+          "nulo": false
+        },
+        {
+          "nome": "import_id",
+          "tipo": "text",
+          "nulo": true
+        },
+        {
+          "nome": "cod_id",
+          "tipo": "text",
+          "nulo": false
+        },
+        {
+          "nome": "distribuidora_id",
+          "tipo": "integer",
+          "nulo": true
+        },
+        {
+          "nome": "origem",
+          "tipo": "USER-DEFINED",
+          "nulo": false
+        },
+        {
+          "nome": "ano",
+          "tipo": "integer",
+          "nulo": false
+        },
+        {
+          "nome": "status",
+          "tipo": "text",
+          "nulo": true
+        },
+        {
+          "nome": "data_conexao",
+          "tipo": "date",
+          "nulo": true
+        },
+        {
+          "nome": "cnae",
+          "tipo": "character varying",
+          "nulo": true
+        },
+        {
+          "nome": "grupo_tensao",
+          "tipo": "text",
+          "nulo": true
+        },
+        {
+          "nome": "modalidade",
+          "tipo": "text",
+          "nulo": true
+        },
+        {
+          "nome": "tipo_sistema",
+          "tipo": "text",
+          "nulo": true
+        },
+        {
+          "nome": "situacao",
+          "tipo": "text",
+          "nulo": true
+        },
+        {
+          "nome": "classe",
+          "tipo": "text",
+          "nulo": true
+        },
+        {
+          "nome": "segmento",
+          "tipo": "text",
+          "nulo": true
+        },
+        {
+          "nome": "subestacao",
+          "tipo": "text",
+          "nulo": true
+        },
+        {
+          "nome": "municipio_id",
+          "tipo": "integer",
+          "nulo": true
+        },
+        {
+          "nome": "bairro",
+          "tipo": "text",
+          "nulo": true
+        },
+        {
+          "nome": "cep",
+          "tipo": "text",
+          "nulo": true
+        },
+        {
+          "nome": "pac",
+          "tipo": "integer",
+          "nulo": true
+        },
+        {
+          "nome": "pn_con",
+          "tipo": "text",
+          "nulo": true
+        },
+        {
+          "nome": "descricao",
+          "tipo": "text",
+          "nulo": true
+        },
+        {
+          "nome": "latitude",
+          "tipo": "double precision",
+          "nulo": true
+        },
+        {
+          "nome": "longitude",
+          "tipo": "double precision",
+          "nulo": true
+        },
+        {
+          "nome": "created_at",
+          "tipo": "timestamp without time zone",
+          "nulo": true
+        },
+        {
+          "nome": "updated_at",
+          "tipo": "timestamp without time zone",
+          "nulo": true
+        },
+        {
+          "nome": "id",
+          "tipo": "uuid",
+          "nulo": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [
+        {
+          "coluna": "import_id",
+          "referencia": "import_status.import_id"
+        },
+        {
+          "coluna": "distribuidora_id",
+          "referencia": "distribuidora.id"
+        },
+        {
+          "coluna": "grupo_tensao",
+          "referencia": "grupo_tensao.id"
+        },
+        {
+          "coluna": "modalidade",
+          "referencia": "modalidade_tarifaria.id"
+        },
+        {
+          "coluna": "tipo_sistema",
+          "referencia": "tipo_sistema.id"
+        },
+        {
+          "coluna": "situacao",
+          "referencia": "situacao_uc.id"
+        },
+        {
+          "coluna": "classe",
+          "referencia": "classe_consumo.id"
+        },
+        {
+          "coluna": "segmento",
+          "referencia": "segmento_mercado.id"
+        },
+        {
+          "coluna": "municipio_id",
+          "referencia": "municipio.id"
+        }
+      ],
+      "indices": [
+        {
+          "nome": "idx_lead_distribuidora_ano",
+          "definicao": "CREATE INDEX idx_lead_distribuidora_ano ON intel_lead.lead_bruto USING btree (distribuidora_id, ano)"
+        },
+        {
+          "nome": "idx_lead_pncon",
+          "definicao": "CREATE INDEX idx_lead_pncon ON intel_lead.lead_bruto USING btree (pn_con)"
+        },
+        {
+          "nome": "idx_lead_bruto_uc_id",
+          "definicao": "CREATE INDEX idx_lead_bruto_uc_id ON intel_lead.lead_bruto USING btree (uc_id)"
+        },
+        {
+          "nome": "lead_bruto_pkey",
+          "definicao": "CREATE UNIQUE INDEX lead_bruto_pkey ON intel_lead.lead_bruto USING btree (id)"
+        },
+        {
+          "nome": "idx_lead_bruto_status",
+          "definicao": "CREATE INDEX idx_lead_bruto_status ON intel_lead.lead_bruto USING btree (status)"
+        },
+        {
+          "nome": "idx_lead_bruto_municipio",
+          "definicao": "CREATE INDEX idx_lead_bruto_municipio ON intel_lead.lead_bruto USING btree (municipio_id)"
+        }
+      ],
+      "linhas": 4063521
+    },
+    "grupo_tensao": {
+      "colunas": [
+        {
+          "nome": "id",
+          "tipo": "text",
+          "nulo": false
+        },
+        {
+          "nome": "descricao",
+          "tipo": "text",
+          "nulo": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [],
+      "indices": [
+        {
+          "nome": "grupo_tensao_pkey",
+          "definicao": "CREATE UNIQUE INDEX grupo_tensao_pkey ON intel_lead.grupo_tensao USING btree (id)"
+        }
+      ],
+      "linhas": 8
+    },
+    "cnae": {
+      "colunas": [
+        {
+          "nome": "id",
+          "tipo": "character varying",
+          "nulo": false
+        },
+        {
+          "nome": "descricao",
+          "tipo": "text",
+          "nulo": false
+        },
+        {
+          "nome": "classe",
+          "tipo": "character varying",
+          "nulo": false
+        },
+        {
+          "nome": "subclasse",
+          "tipo": "character varying",
+          "nulo": false
+        },
+        {
+          "nome": "grupo",
+          "tipo": "character varying",
+          "nulo": false
+        },
+        {
+          "nome": "divisao",
+          "tipo": "character varying",
+          "nulo": false
+        },
+        {
+          "nome": "secao",
+          "tipo": "character",
+          "nulo": false
+        },
+        {
+          "nome": "secao_descricao",
+          "tipo": "text",
+          "nulo": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [],
+      "indices": [
+        {
+          "nome": "cnae_pkey",
+          "definicao": "CREATE UNIQUE INDEX cnae_pkey ON intel_lead.cnae USING btree (id)"
+        }
+      ],
+      "linhas": 1331
+    },
+    "import_status": {
+      "colunas": [
+        {
+          "nome": "import_id",
+          "tipo": "text",
+          "nulo": false
+        },
+        {
+          "nome": "distribuidora_id",
+          "tipo": "integer",
+          "nulo": true
+        },
+        {
+          "nome": "ano",
+          "tipo": "integer",
+          "nulo": false
+        },
+        {
+          "nome": "camada",
+          "tipo": "USER-DEFINED",
+          "nulo": false
+        },
+        {
+          "nome": "status",
+          "tipo": "USER-DEFINED",
+          "nulo": false
+        },
+        {
+          "nome": "linhas_processadas",
+          "tipo": "integer",
+          "nulo": true
+        },
+        {
+          "nome": "data_inicio",
+          "tipo": "timestamp without time zone",
+          "nulo": true
+        },
+        {
+          "nome": "data_fim",
+          "tipo": "timestamp without time zone",
+          "nulo": true
+        },
+        {
+          "nome": "observacoes",
+          "tipo": "text",
+          "nulo": true
+        },
+        {
+          "nome": "erro",
+          "tipo": "text",
+          "nulo": true
+        },
+        {
+          "nome": "distribuidora_nome",
+          "tipo": "text",
+          "nulo": true
+        }
+      ],
+      "primary_keys": [
+        "import_id"
+      ],
+      "foreign_keys": [
+        {
+          "coluna": "distribuidora_id",
+          "referencia": "distribuidora.id"
+        }
+      ],
+      "indices": [
+        {
+          "nome": "import_status_pkey",
+          "definicao": "CREATE UNIQUE INDEX import_status_pkey ON intel_lead.import_status USING btree (import_id)"
+        },
+        {
+          "nome": "idx_import_status_combo",
+          "definicao": "CREATE INDEX idx_import_status_combo ON intel_lead.import_status USING btree (camada, distribuidora_id, ano)"
+        }
+      ],
+      "linhas": 21
+    },
+    "dataset_url_catalog": {
+      "colunas": [
+        {
+          "nome": "id",
+          "tipo": "integer",
+          "nulo": false
+        },
+        {
+          "nome": "title",
+          "tipo": "text",
+          "nulo": true
+        },
+        {
+          "nome": "description",
+          "tipo": "text",
+          "nulo": true
+        },
+        {
+          "nome": "url",
+          "tipo": "text",
+          "nulo": false
+        },
+        {
+          "nome": "url_hash",
+          "tipo": "text",
+          "nulo": false
+        },
+        {
+          "nome": "created",
+          "tipo": "timestamp without time zone",
+          "nulo": true
+        },
+        {
+          "nome": "modified",
+          "tipo": "timestamp without time zone",
+          "nulo": true
+        },
+        {
+          "nome": "origem",
+          "tipo": "text",
+          "nulo": true
+        },
+        {
+          "nome": "tipo",
+          "tipo": "text",
+          "nulo": true
+        },
+        {
+          "nome": "snippet",
+          "tipo": "text",
+          "nulo": true
+        },
+        {
+          "nome": "tags",
+          "tipo": "ARRAY",
+          "nulo": true
+        },
+        {
+          "nome": "foi_importado",
+          "tipo": "boolean",
+          "nulo": true
+        },
+        {
+          "nome": "ultima_verificacao",
+          "tipo": "timestamp without time zone",
+          "nulo": true
+        },
+        {
+          "nome": "observacoes",
+          "tipo": "text",
+          "nulo": true
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [],
+      "indices": [
+        {
+          "nome": "dataset_url_catalog_pkey",
+          "definicao": "CREATE UNIQUE INDEX dataset_url_catalog_pkey ON intel_lead.dataset_url_catalog USING btree (id)"
+        },
+        {
+          "nome": "dataset_url_catalog_url_key",
+          "definicao": "CREATE UNIQUE INDEX dataset_url_catalog_url_key ON intel_lead.dataset_url_catalog USING btree (url)"
+        },
+        {
+          "nome": "dataset_url_catalog_url_hash_key",
+          "definicao": "CREATE UNIQUE INDEX dataset_url_catalog_url_hash_key ON intel_lead.dataset_url_catalog USING btree (url_hash)"
+        }
+      ],
+      "linhas": 747
+    },
+    "download_log": {
+      "colunas": [
+        {
+          "nome": "id",
+          "tipo": "integer",
+          "nulo": false
+        },
+        {
+          "nome": "distribuidora",
+          "tipo": "text",
+          "nulo": false
+        },
+        {
+          "nome": "ano",
+          "tipo": "smallint",
+          "nulo": false
+        },
+        {
+          "nome": "status",
+          "tipo": "text",
+          "nulo": false
+        },
+        {
+          "nome": "tempo_download",
+          "tipo": "real",
+          "nulo": true
+        },
+        {
+          "nome": "erro",
+          "tipo": "text",
+          "nulo": true
+        },
+        {
+          "nome": "created_at",
+          "tipo": "timestamp without time zone",
+          "nulo": true
+        },
+        {
+          "nome": "updated_at",
+          "tipo": "timestamp without time zone",
+          "nulo": true
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [],
+      "indices": [
+        {
+          "nome": "download_log_pkey",
+          "definicao": "CREATE UNIQUE INDEX download_log_pkey ON intel_lead.download_log USING btree (id)"
+        },
+        {
+          "nome": "idx_download_log_dist_ano",
+          "definicao": "CREATE INDEX idx_download_log_dist_ano ON intel_lead.download_log USING btree (distribuidora, ano)"
+        }
+      ],
+      "linhas": 0
+    }
+  },
+  "views": [
+    {
+      "nome": "vw_lead_completo_detalhado",
+      "definicao": " SELECT lb.uc_id,\n    lb.classe,\n    lb.grupo_tensao,\n    lb.modalidade,\n    m.uf AS estado,\n    m.nome AS municipio,\n    d.nome AS distribuidora_nome,\n    lb.pac,\n    lb.latitude,\n    lb.longitude,\n    s.descricao AS segmento_desc,\n    lb.status,\n    qa.media_dic,\n    qa.media_fic\n   FROM ((((lead_bruto lb\n     LEFT JOIN municipio m ON ((m.id = lb.municipio_id)))\n     LEFT JOIN distribuidora d ON ((d.id = lb.distribuidora_id)))\n     LEFT JOIN segmento_mercado s ON ((s.id = lb.segmento)))\n     LEFT JOIN vw_lead_qualidade_agg qa ON ((qa.lead_bruto_id = lb.id)));"
+    },
+    {
+      "nome": "lead_qualidade",
+      "definicao": " SELECT lead_bruto_id,\n    round((avg(dic))::numeric, 2) AS dic_med,\n    round((avg(fic))::numeric, 2) AS fic_med\n   FROM lead_qualidade_mensal\n  GROUP BY lead_bruto_id;"
+    },
+    {
+      "nome": "dashboard_status_leads",
+      "definicao": " SELECT status,\n    count(*) AS total\n   FROM lead_bruto\n  GROUP BY status;"
+    },
+    {
+      "nome": "vw_lead_enriquecido_resumido",
+      "definicao": " SELECT lb.id AS lead_bruto_id,\n    lb.uc_id,\n    lb.cod_id,\n    lb.ano,\n    lb.status,\n    lb.data_conexao,\n    d.nome_comum AS distribuidora,\n    m.nome AS municipio,\n    m.uf,\n    lb.cep,\n    lb.bairro,\n    lb.latitude,\n    lb.longitude,\n    le.energia_total,\n    ld.demanda_total,\n    lq.dic,\n    lq.fic\n   FROM (((((lead_bruto lb\n     LEFT JOIN distribuidora d ON ((lb.distribuidora_id = d.id)))\n     LEFT JOIN municipio m ON ((lb.municipio_id = m.id)))\n     LEFT JOIN lead_energia_mensal le ON (((le.lead_bruto_id = lb.id) AND (le.mes = 12))))\n     LEFT JOIN lead_demanda_mensal ld ON (((ld.lead_bruto_id = lb.id) AND (ld.mes = 12))))\n     LEFT JOIN lead_qualidade_mensal lq ON (((lq.lead_bruto_id = lb.id) AND (lq.mes = 12))));"
+    },
+    {
+      "nome": "vw_import_status_resumo",
+      "definicao": " SELECT i.import_id,\n    d.nome_comum AS distribuidora,\n    i.ano,\n    i.camada,\n    i.status,\n    i.linhas_processadas,\n    i.data_inicio,\n    i.data_fim,\n    i.erro\n   FROM (import_status i\n     JOIN distribuidora d ON ((d.id = i.distribuidora_id)));"
+    },
+    {
+      "nome": "vw_lead_enrichment_status",
+      "definicao": " SELECT l.id AS lead_bruto_id,\n    l.uc_id,\n    max(e.etapa) AS ultima_etapa,\n    max(e.executado_em) AS ultima_execucao,\n    max(e.resultado) FILTER (WHERE (e.executado_em = ( SELECT max(e2.executado_em) AS max\n           FROM lead_enrichment_log e2\n          WHERE (e2.lead_bruto_id = e.lead_bruto_id)))) AS resultado\n   FROM (lead_bruto l\n     LEFT JOIN lead_enrichment_log e ON ((l.id = e.lead_bruto_id)))\n  GROUP BY l.id, l.uc_id;"
+    },
+    {
+      "nome": "vw_distribuidora_status",
+      "definicao": " SELECT d.id,\n    d.nome,\n    count(*) FILTER (WHERE (s.status = 'completed'::status_enum)) AS imports_ok,\n    count(*) FILTER (WHERE (s.status = 'failed'::status_enum)) AS imports_falha,\n    max(s.data_fim) AS ultima_importacao\n   FROM (distribuidora d\n     LEFT JOIN import_status s ON ((s.distribuidora_id = d.id)))\n  GROUP BY d.id, d.nome;"
+    },
+    {
+      "nome": "vw_lead_status_enriquecimento",
+      "definicao": " SELECT lb.uc_id,\n    count(log.*) AS total_logs,\n    max(log.resultado) AS resultado_atual,\n    max(log.executado_em) AS ultima_execucao\n   FROM (lead_bruto lb\n     LEFT JOIN lead_enrichment_log log ON ((log.lead_bruto_id = lb.id)))\n  GROUP BY lb.uc_id;"
+    },
+    {
+      "nome": "vw_lead_demanda_agg",
+      "definicao": " SELECT lead_bruto_id,\n    round((avg(demanda_ponta))::numeric, 2) AS media_demanda_ponta,\n    round((sum(demanda_ponta))::numeric, 2) AS total_demanda_ponta,\n    round((avg(demanda_fora_ponta))::numeric, 2) AS media_demanda_fora_ponta,\n    round((sum(demanda_fora_ponta))::numeric, 2) AS total_demanda_fora_ponta,\n    round((avg(demanda_contratada))::numeric, 2) AS media_contratada,\n    round((sum(demanda_contratada))::numeric, 2) AS total_contratada,\n    round((avg(demanda_total))::numeric, 2) AS media_demanda_total,\n    round((sum(demanda_total))::numeric, 2) AS total_demanda_total\n   FROM lead_demanda_mensal\n  GROUP BY lead_bruto_id;"
+    },
+    {
+      "nome": "vw_lead_com_coordenadas",
+      "definicao": " SELECT l.uc_id,\n    l.import_id,\n    l.cod_id,\n    l.distribuidora_id,\n    l.origem,\n    l.ano,\n    l.status,\n    l.data_conexao,\n    l.cnae,\n    l.grupo_tensao,\n    l.modalidade,\n    l.tipo_sistema,\n    l.situacao,\n    l.classe,\n    l.segmento,\n    l.subestacao,\n    l.municipio_id,\n    l.bairro,\n    l.cep,\n    l.pac,\n    l.pn_con,\n    l.descricao,\n    l.latitude,\n    l.longitude,\n    l.created_at,\n    l.updated_at,\n    l.id,\n    COALESCE(l.latitude, p.latitude) AS latitude_final,\n    COALESCE(l.longitude, p.longitude) AS longitude_final\n   FROM (lead_bruto l\n     LEFT JOIN ponto_notavel p ON ((l.pn_con = p.pn_id)));"
+    },
+    {
+      "nome": "vw_lead_qualidade_agg",
+      "definicao": " SELECT lead_bruto_id,\n    round((avg(dic))::numeric, 2) AS media_dic,\n    round((avg(fic))::numeric, 2) AS media_fic,\n    round((sum(sem_rede))::numeric, 2) AS total_horas_sem_rede\n   FROM lead_qualidade_mensal\n  GROUP BY lead_bruto_id;"
+    },
+    {
+      "nome": "vw_lead_energia_agg",
+      "definicao": " SELECT lead_bruto_id,\n    round((avg(energia_ponta))::numeric, 2) AS media_energia_ponta,\n    round((sum(energia_ponta))::numeric, 2) AS total_energia_ponta,\n    round((avg(energia_fora_ponta))::numeric, 2) AS media_energia_fora_ponta,\n    round((sum(energia_fora_ponta))::numeric, 2) AS total_energia_fora_ponta,\n    round((avg(energia_total))::numeric, 2) AS media_energia_total,\n    round((sum(energia_total))::numeric, 2) AS total_energia_total\n   FROM lead_energia_mensal\n  GROUP BY lead_bruto_id;"
+    },
+    {
+      "nome": "vw_leads_prioritarios_enriquecimento",
+      "definicao": " WITH medias AS (\n         SELECT lb_1.id AS lead_id,\n            (avg(em.energia_total))::numeric AS media_energia_total,\n            (avg(dm.demanda_total))::numeric AS media_demanda_total,\n            (avg(dm.demanda_contratada))::numeric AS media_demanda_contratada,\n            (avg(qm.dic))::numeric AS media_dic,\n            (avg(qm.fic))::numeric AS media_fic,\n            (max(qm.sem_rede) > (0)::double precision) AS sem_rede,\n            max(lb_1.modalidade) AS modalidade_tarifaria\n           FROM (((lead_bruto lb_1\n             LEFT JOIN lead_energia_mensal em ON ((em.lead_bruto_id = lb_1.id)))\n             LEFT JOIN lead_demanda_mensal dm ON ((dm.lead_bruto_id = lb_1.id)))\n             LEFT JOIN lead_qualidade_mensal qm ON ((qm.lead_bruto_id = lb_1.id)))\n          WHERE ((lb_1.origem = ANY (ARRAY['UCMT'::origem_enum, 'UCBT'::origem_enum])) AND (lb_1.situacao = 'ATIVA'::text) AND (lb_1.cnae IS NOT NULL))\n          GROUP BY lb_1.id\n        )\n SELECT m.lead_id,\n    m.media_energia_total,\n    m.media_demanda_total,\n    m.media_demanda_contratada,\n    m.media_dic,\n    m.media_fic,\n    m.sem_rede,\n    m.modalidade_tarifaria,\n    lb.cnae,\n    lb.status,\n    lb.origem,\n    p.latitude,\n    p.longitude,\n    (((((\n        CASE\n            WHEN (m.media_energia_total > (100000)::numeric) THEN 3\n            ELSE 0\n        END +\n        CASE\n            WHEN (m.media_demanda_contratada > (500)::numeric) THEN 2\n            ELSE 0\n        END) +\n        CASE\n            WHEN (m.media_dic >= (30)::numeric) THEN 2\n            ELSE 0\n        END) +\n        CASE\n            WHEN (m.media_fic >= (10)::numeric) THEN 2\n            ELSE 0\n        END) +\n        CASE\n            WHEN m.sem_rede THEN 2\n            ELSE 0\n        END) +\n        CASE\n            WHEN (m.modalidade_tarifaria = ANY (ARRAY['Horo Sazonal'::text, 'HORO_SAZ'::text, 'HORO SAZ'::text])) THEN 1\n            ELSE 0\n        END) AS score_potencial\n   FROM ((medias m\n     JOIN lead_bruto lb ON ((lb.id = m.lead_id)))\n     LEFT JOIN ponto_notavel p ON ((lb.pn_con = p.pn_id)))\n  WHERE (lb.status = 'raw'::text)\n  ORDER BY (((((\n        CASE\n            WHEN (m.media_energia_total > (100000)::numeric) THEN 3\n            ELSE 0\n        END +\n        CASE\n            WHEN (m.media_demanda_contratada > (500)::numeric) THEN 2\n            ELSE 0\n        END) +\n        CASE\n            WHEN (m.media_dic >= (30)::numeric) THEN 2\n            ELSE 0\n        END) +\n        CASE\n            WHEN (m.media_fic >= (10)::numeric) THEN 2\n            ELSE 0\n        END) +\n        CASE\n            WHEN m.sem_rede THEN 2\n            ELSE 0\n        END) +\n        CASE\n            WHEN (m.modalidade_tarifaria = ANY (ARRAY['Horo Sazonal'::text, 'HORO_SAZ'::text, 'HORO SAZ'::text])) THEN 1\n            ELSE 0\n        END) DESC;"
+    },
+    {
+      "nome": "vw_import_status_resumido",
+      "definicao": " SELECT ano,\n    camada,\n    status,\n    count(*) AS total\n   FROM import_status\n  GROUP BY ano, camada, status;"
+    },
+    {
+      "nome": "distribuidora_view",
+      "definicao": " SELECT id,\n    nome AS nome_oficial,\n    nome_comum AS nome_usual\n   FROM distribuidora\n  ORDER BY nome_comum;"
+    },
+    {
+      "nome": "lead_com_coordenadas",
+      "definicao": " SELECT lb.uc_id,\n    lb.latitude,\n    lb.longitude,\n    lb.classe,\n    lb.grupo_tensao,\n    lb.pac,\n    d.nome AS distribuidora_nome,\n    lb.status\n   FROM (lead_bruto lb\n     LEFT JOIN distribuidora d ON ((d.id = lb.distribuidora_id)))\n  WHERE ((lb.latitude IS NOT NULL) AND (lb.longitude IS NOT NULL));"
+    }
+  ]
+}

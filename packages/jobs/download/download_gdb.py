@@ -1,19 +1,75 @@
-import json
 import zipfile
 import shutil
 import argparse
 from pathlib import Path
-from urllib.request import urlretrieve
+from datetime import datetime
+import requests
+import time
+import sys
+
+from psycopg2.extras import RealDictCursor
+sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
+from packages.database.connection import get_db_connection
 
 # Caminhos
-INDEX_PATH = Path(__file__).resolve().parents[3] / "data/models/aneel_gdb_index.json"
 DOWNLOAD_DIR = Path("data/downloads")
 TMP_DIR = Path("data/tmp")
 TMP_DIR.mkdir(parents=True, exist_ok=True)
 
+# Camadas que serão extraídas
+CAMADAS_VALIDAS = {"UCAT", "UCMT", "UCBT", "PONNOT"}
+
+def registrar_log(distribuidora, ano, status, erro=None, tempo_download=None):
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT id FROM intel_lead.download_log
+                WHERE distribuidora = %s AND ano = %s
+            """, (distribuidora, ano))
+            row = cur.fetchone()
+
+            if row:
+                cur.execute("""
+                    UPDATE intel_lead.download_log
+                    SET status = %s,
+                        erro = %s,
+                        tempo_download = %s,
+                        updated_at = NOW()
+                    WHERE id = %s
+                """, (status, erro, tempo_download, row[0]))
+                return row[0]
+            else:
+                cur.execute("""
+                    INSERT INTO intel_lead.download_log (
+                        distribuidora, ano, status, erro, tempo_download
+                    ) VALUES (%s, %s, %s, %s, %s)
+                    RETURNING id
+                """, (distribuidora, ano, status, erro, tempo_download))
+                return cur.fetchone()[0]
+
+def obter_url_gdb(distribuidora: str, ano: int) -> tuple[str, str]:
+    with get_db_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+            cursor.execute("""
+                SELECT title, url
+                FROM intel_lead.dataset_url_catalog
+                WHERE lower(title) LIKE %s
+                  AND title ILIKE %s
+                  AND tipo = 'File Geodatabase'
+                LIMIT 1
+            """, (f"%{distribuidora.lower()}%", f"%{ano}%"))
+            row = cursor.fetchone()
+            if not row:
+                raise Exception(f"❌ Nenhum GDB encontrado no banco para {distribuidora}_{ano}")
+            return row["title"], row["url"]
+
 def baixar_arquivo(url: str, destino: Path):
     print(f"⬇️  Baixando: {url}")
-    urlretrieve(url, destino)
+    with requests.get(url, stream=True) as r:
+        r.raise_for_status()
+        with open(destino, 'wb') as f:
+            for chunk in r.iter_content(chunk_size=8192):
+                f.write(chunk)
     print(f"✅ Download salvo em: {destino}")
 
 def extrair_gdb(zip_path: Path, destino_final: Path):
@@ -21,47 +77,57 @@ def extrair_gdb(zip_path: Path, destino_final: Path):
     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
         zip_ref.extractall(TMP_DIR)
 
+    count = 0
     for item in TMP_DIR.iterdir():
-        if item.suffix == ".gdb" or item.name.endswith(".gdb"):
+        if item.is_dir() and any(camada in item.name.upper() for camada in CAMADAS_VALIDAS):
             final_path = destino_final / item.name
             shutil.move(str(item), final_path)
-            print(f"✅ .gdb extraído para: {final_path}")
-            break
+            print(f"✅ .gdb extraído: {final_path}")
+            count += 1
 
     zip_path.unlink()
     shutil.rmtree(TMP_DIR, ignore_errors=True)
 
+    if count == 0:
+        print("⚠️ Nenhuma camada relevante encontrada.")
+
 def baixar_gdb(distribuidora: str, ano: int):
-    with open(INDEX_PATH, "r", encoding="utf-8") as f:
-        index = json.load(f)
+    log_id = registrar_log(distribuidora, ano, "downloading")
+    try:
+        start = time.time()
+        title, url = obter_url_gdb(distribuidora, ano)
+        nome_base = title.replace(" ", "_").replace("-", "_")
+        zip_path = TMP_DIR / f"{nome_base}.zip"
 
-    chave_original = f"{distribuidora}_{ano}"
-    chave_normalizada = chave_original.lower().replace(" ", "_").replace("-", "_")
+        # Evita baixar de novo
+        if any(Path(DOWNLOAD_DIR / d).exists() for d in os.listdir(DOWNLOAD_DIR) if f"{distribuidora}" in d and str(ano) in d):
+            print("⚠️ Arquivo já existente. Pulando download.")
+            registrar_log(distribuidora, ano, "done", tempo_download=0)
+            return
 
-    # Mapeia todas as chaves disponíveis para lower()
-    chaves_disponiveis = {k.lower().replace(" ", "_").replace("-", "_"): k for k in index.keys()}
+        baixar_arquivo(url, zip_path)
+        registrar_log(distribuidora, ano, "extracting")
 
-    if chave_normalizada not in chaves_disponiveis:
-        raise Exception(f"Distribuidora/ano não encontrado: {chave_original}")
+        extrair_gdb(zip_path, DOWNLOAD_DIR)
+        tempo = time.time() - start
+        registrar_log(distribuidora, ano, "done", tempo_download=tempo)
 
-    chave_real = chaves_disponiveis[chave_normalizada]
-    url = index[chave_real]
+    except Exception as e:
+        registrar_log(distribuidora, ano, "error", erro=str(e))
+        raise
 
-    gdb_name = chave_real + ".gdb"
-    gdb_path = DOWNLOAD_DIR / gdb_name
-
-    if gdb_path.exists():
-        print(f"⚠️  Já existe: {gdb_path}, pulando download.")
-        return
-
-    destino_zip = TMP_DIR / f"{chave_real}.zip"
-    baixar_arquivo(url, destino_zip)
-    extrair_gdb(destino_zip, DOWNLOAD_DIR)
-
+# Modo terminal ou CLI
 if __name__ == "__main__":
+    import os
     parser = argparse.ArgumentParser()
-    parser.add_argument("--distribuidora", required=True)
-    parser.add_argument("--ano", required=True, type=int)
+    parser.add_argument("--distribuidora", required=False)
+    parser.add_argument("--ano", required=False, type=int)
     args = parser.parse_args()
 
-    baixar_gdb(args.distribuidora, args.ano)
+    if args.distribuidora and args.ano:
+        baixar_gdb(args.distribuidora, args.ano)
+    else:
+        print("🔧 Modo interativo")
+        dist = input("Distribuidora: ")
+        ano = int(input("Ano: "))
+        baixar_gdb(dist, ano)
