@@ -37,6 +37,7 @@ class LeadList(BaseModel):
 # -------------------------------
 
 class LeadDetalhado(BaseModel):
+    id: str
     uc_id: str
     cod_id: Optional[str]
     import_id: Optional[str]
@@ -64,11 +65,10 @@ class LeadDetalhado(BaseModel):
     longitude: Optional[float]
     created_at: Optional[datetime]
     updated_at: Optional[datetime]
-    id: Optional[str]
 
     cnae_descricao: Optional[str]
     segmento_desc: Optional[str]
-
+    distribuidora_nome: Optional[str]
     cnpj: Optional[str]
     nome_fantasia: Optional[str]
     razao_social: Optional[str]

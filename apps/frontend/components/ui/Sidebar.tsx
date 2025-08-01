@@ -7,8 +7,7 @@ import { clsx } from 'clsx';
 import { 
   Home, MapPinned, BarChart2, MapIcon, LayoutDashboard,
   ChevronRight, Settings, User, LogOut, Search, Globe, 
-  Zap, AlertCircle, TrendingUp, FileText 
-} from 'lucide-react';
+  Zap, AlertCircle, TrendingUp, FileText, Bell, Bot} from 'lucide-react';
 import { useState } from 'react';
 import { useSidebar } from '@/contexts/SidebarContext';
 
@@ -17,6 +16,9 @@ const mainLinks = [
   { href: '/mapa', label: 'Mapa interativo', icon: MapPinned },
   { href: '/leads', label: 'Dados', icon: BarChart2 },
   { href: '/mapaHeat', label: 'Mapa de calor', icon: MapIcon },
+   { href: '/detetive', label: 'Detetive', icon: Search },
+   { href: '/noticias', label: 'Notícias', icon: Bell },
+   { href: '/youknow', label: 'YouKnow', icon: Bot },
 ];
 
 const detectiveFeatures = [
