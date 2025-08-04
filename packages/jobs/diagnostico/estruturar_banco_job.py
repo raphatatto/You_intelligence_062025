@@ -70,6 +70,14 @@ def get_views(cursor):
     """)
     return [{"nome": r[0], "definicao": r[1]} for r in cursor.fetchall()]
 
+def get_views_materializadas(cursor):
+    cursor.execute("""
+        SELECT matviewname, definition
+        FROM pg_matviews
+        WHERE schemaname = 'intel_lead'
+    """)
+    return [{"nome": r[0], "definicao": r[1]} for r in cursor.fetchall()]
+
 def salvar_json(path: Path, data):
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
@@ -88,7 +96,8 @@ def analisar_banco():
         cursor = conn.cursor()
         resultado = {
             "tabelas": {},
-            "views": get_views(cursor)
+            "views": get_views(cursor),
+            "views_materializadas": get_views_materializadas(cursor)
         }
 
         linhas_tabelas = []
@@ -114,14 +123,13 @@ def analisar_banco():
             indices_geral.extend([{"tabela": tabela, **idx} for idx in indices])
             fks_geral.extend([{"tabela": tabela, **fk} for fk in fks])
 
-        # Criação da pasta única por data/hora
         agora = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         pasta = Path(f"data/diagnosticos/{agora}")
         pasta.mkdir(parents=True, exist_ok=True)
 
-        # Exporta tudo
         salvar_json(pasta / "estrutura_banco.json", resultado)
         salvar_json(pasta / "views.json", resultado["views"])
+        salvar_json(pasta / "views_materializadas.json", resultado["views_materializadas"])
         salvar_csv(pasta / "tabelas.csv", linhas_tabelas)
         salvar_csv(pasta / "indices.csv", indices_geral)
         salvar_csv(pasta / "fks.csv", fks_geral)
