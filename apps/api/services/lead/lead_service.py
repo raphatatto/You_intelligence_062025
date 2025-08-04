@@ -6,7 +6,8 @@ from apps.api.schemas.lead_schema import (
     LeadResumo,
     LeadMapOut,
     LeadList,
-    LeadOut
+    LeadOut,
+
 )
 import json
 
@@ -192,3 +193,18 @@ async def get_resumo(
         media_potencia=row["media_potencia"],
         por_classe=json.loads(row["por_classe"]) if row["por_classe"] else {}
     )
+
+
+async def get_leads_detalhados(db: AsyncSession) -> list[LeadDetalhado]:
+    print("🚀 Função get_leads_detalhados chamada!")
+    try:
+        query = text("""SELECT * FROM intel_lead.mv_lead_completo_detalhado""")
+        result = await db.execute(query)
+        rows = result.mappings().all()
+        print("📦 Total de registros:", len(rows))
+        if rows:
+            print("🔍 Primeira linha:", rows[0])
+        return [LeadDetalhado(**row) for row in rows]
+    except Exception as e:
+        print("❌ ERRO:", e)
+        raise

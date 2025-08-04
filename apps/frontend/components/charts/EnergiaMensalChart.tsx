@@ -48,9 +48,9 @@ export default function EnergiaMensalChart({ data }: { data: { mes: string; ener
               <span key="value" className="text-blue-400 font-bold">{value} kWh</span>
             ]}
             labelFormatter={(label) => (
-              <div className="text-white font-medium">
+              <span className="text-white font-medium">
                 Mês: {label}
-              </div>
+              </span>
             )}
             cursor={{ stroke: '#60a5fa', strokeWidth: 1, strokeDasharray: '3 3' }}
           />

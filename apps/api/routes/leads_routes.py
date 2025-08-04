@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, Query
 from typing import Optional
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.api.schemas.lead_schema import (
@@ -17,7 +16,8 @@ from apps.api.services.lead.lead_service import (
     get_resumo,
     get_map_points,
     get_qualidade,
-    heatmap_points
+    heatmap_points,
+    get_leads_detalhados,
 )
 
 from packages.database.session import get_session
@@ -97,3 +97,8 @@ async def heatmap(
     db: AsyncSession = Depends(get_session),
 ):
     return await heatmap_points(db, segmento)
+
+
+@router.get("/leads-detalhados")
+async def listar_leads_detalhados(db:AsyncSession = Depends(get_session)):
+    return await get_leads_detalhados(db)
