@@ -39,7 +39,7 @@ def importar_ponnot(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, 
 
     status_final = "failed"
     obs_final = ""
-    linhas = None
+    linhas = 0
 
     try:
         layer = detectar_layer(gdb_path)
@@ -50,12 +50,6 @@ def importar_ponnot(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, 
         tqdm.write(f"Lendo camada '{layer}'...")
         gdf = gpd.read_file(str(gdb_path), layer=layer)
 
-        if gdf.empty:
-            status_final = "no_new_rows"
-            obs_final = "GDF vazio"
-            linhas = 0
-            return
-
         gdf.replace(["None", "nan", "", "***", "-"], None, inplace=True)
         for col in RELEVANT_COLUMNS:
             if col not in gdf.columns:
@@ -65,36 +59,38 @@ def importar_ponnot(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, 
         if len(dist_ids) != 1:
             status_final = "skipped"
             obs_final = "ID inválido em PONNOT"
-            return
+        elif gdf.empty:
+            status_final = "no_new_rows"
+            obs_final = "GDF vazio"
+        else:
+            dist_id = int(dist_ids[0])
+            tqdm.write("Transformando PONNOT para DataFrame...")
 
-        dist_id = int(dist_ids[0])
-        tqdm.write("Transformando PONNOT para DataFrame...")
+            df_pn = pd.DataFrame({
+                "pn_id": [
+                    gerar_pn_id(row["NOME"], row["LAT"], row["LONG"], ano, dist_id)
+                    for _, row in gdf.iterrows()
+                ],
+                "import_id": import_id,
+                "nome": sanitize_str(gdf["NOME"]),
+                "municipio_id": sanitize_int(gdf["MUN"]),
+                "latitude": sanitize_numeric(gdf["LAT"]),
+                "longitude": sanitize_numeric(gdf["LONG"]),
+                "descricao": sanitize_str(gdf["DESCR"]),
+                "cep": sanitize_int(gdf["CEP"]),
+            })
 
-        df_pn = pd.DataFrame({
-            "pn_id": [
-                gerar_pn_id(row["NOME"], row["LAT"], row["LONG"], ano, dist_id)
-                for _, row in gdf.iterrows()
-            ],
-            "import_id": import_id,
-            "nome": sanitize_str(gdf["NOME"]),
-            "municipio_id": sanitize_int(gdf["MUN"]),
-            "latitude": sanitize_numeric(gdf["LAT"]),
-            "longitude": sanitize_numeric(gdf["LONG"]),
-            "descricao": sanitize_str(gdf["DESCR"]),
-            "cep": sanitize_int(gdf["CEP"]),
-        })
+            df_pn = df_pn[df_pn["pn_id"].notnull()].drop_duplicates(subset=["pn_id"]).reset_index(drop=True)
 
-        df_pn = df_pn[df_pn["pn_id"].notnull()].drop_duplicates(subset=["pn_id"]).reset_index(drop=True)
+            with get_db_connection() as conn:
+                with conn.cursor() as cur:
+                    insert_copy(cur, df_pn, "ponto_notavel", df_pn.columns.tolist())
+                conn.commit()
 
-        with get_db_connection() as conn:
-            with conn.cursor() as cur:
-                insert_copy(cur, df_pn, "ponto_notavel", df_pn.columns.tolist())
-            conn.commit()
-
-        status_final = "completed"
-        obs_final = f"{len(df_pn)} pontos notáveis"
-        linhas = len(df_pn)
-        tqdm.write(f"Importação de PONNOT finalizada com {len(df_pn)} registros")
+            status_final = "completed"
+            obs_final = f"{len(df_pn)} pontos notáveis"
+            linhas = len(df_pn)
+            tqdm.write(f"Importação de PONNOT finalizada com {linhas} registros")
 
     except Exception as e:
         tqdm.write(f"Erro ao importar PONNOT: {e}")

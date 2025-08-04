@@ -46,6 +46,10 @@ def importar_ucbt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
     import_id = gerar_import_id(prefixo, ano, camada)
     registrar_status(prefixo, ano, camada, "running", distribuidora_nome=distribuidora)
 
+    status_final = "failed"
+    obs_final = ""
+    total_inserted = 0
+
     try:
         tqdm.write("Abrindo camada 'UCBT_tab' com Fiona...")
         with fiona.open(str(gdb_path), layer="UCBT_tab") as src:
@@ -54,7 +58,6 @@ def importar_ucbt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
             chunk = []
             all_uc_ids = []
             all_rows = []
-            total_inserted = 0
 
             with get_db_connection() as conn:
                 with conn.cursor() as cur:
@@ -83,78 +86,90 @@ def importar_ucbt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
                         conn.commit()
 
                     if total_inserted == 0:
-                        registrar_status(prefixo, ano, camada, "no_new_rows", import_id=import_id)
-                        tqdm.write("Nenhum registro válido para importar.")
+                        status_final = "no_new_rows"
+                        obs_final = "Nenhum registro válido para importar."
                         return
 
-                    tqdm.write("Gerando dados mensais...")
+                    try:
+                        tqdm.write("Gerando dados mensais...")
 
-                    df_ids = pd.read_sql("""
-                        SELECT id AS lead_bruto_id, uc_id FROM lead_bruto WHERE import_id = %s
-                    """, conn, params=(import_id,))
-                    ucid_map = df_ids.set_index("uc_id")["lead_bruto_id"].to_dict()
+                        df_ids = pd.read_sql("""
+                            SELECT id AS lead_bruto_id, uc_id FROM lead_bruto WHERE import_id = %s
+                        """, conn, params=(import_id,))
+                        ucid_map = df_ids.set_index("uc_id")["lead_bruto_id"].to_dict()
 
-                    energia_data, qualidade_data, demanda_data = [], [], []
+                        energia_data, qualidade_data, demanda_data = [], [], []
 
-                    for row in tqdm(all_rows, desc="Mensais"):
-                        cod_id = row.get("COD_ID")
-                        uc_id = gerar_uc_id(cod_id, ano, camada, dist_id)
-                        lead_bruto_id = ucid_map.get(uc_id)
-                        if not lead_bruto_id:
-                            continue
+                        for row in tqdm(all_rows, desc="Mensais"):
+                            cod_id = row.get("COD_ID")
+                            uc_id = gerar_uc_id(cod_id, ano, camada, dist_id)
+                            lead_bruto_id = ucid_map.get(uc_id)
+                            if not lead_bruto_id:
+                                continue
 
-                        for mes in range(1, 13):
-                            energia_data.append({
-                                "lead_bruto_id": lead_bruto_id,
-                                "mes": mes,
-                                "energia_ponta": None,
-                                "energia_fora_ponta": None,
-                                "energia_total": sanitize_numeric(row.get(f"ENE_{mes:02d}")),
-                                "origem": camada,
-                                "import_id": import_id
-                            })
-                            qualidade_data.append({
-                                "lead_bruto_id": lead_bruto_id,
-                                "mes": mes,
-                                "dic": sanitize_numeric(row.get(f"DIC_{mes:02d}")),
-                                "fic": sanitize_numeric(row.get(f"FIC_{mes:02d}")),
-                                "sem_rede": sanitize_numeric(row.get("SEMRED")),
-                                "origem": camada,
-                                "import_id": import_id
-                            })
-                            demanda_data.append({
-                                "lead_bruto_id": lead_bruto_id,
-                                "mes": mes,
-                                "demanda_ponta": None,
-                                "demanda_fora_ponta": None,
-                                "demanda_total": sanitize_numeric(row.get(f"DEM_{mes:02d}")),
-                                "demanda_contratada": sanitize_numeric(row.get("DEM_CONT")),
-                                "origem": camada,
-                                "import_id": import_id
-                            })
+                            for mes in range(1, 13):
+                                energia_data.append({
+                                    "lead_bruto_id": lead_bruto_id,
+                                    "mes": mes,
+                                    "energia_ponta": None,
+                                    "energia_fora_ponta": None,
+                                    "energia_total": sanitize_numeric(row.get(f"ENE_{mes:02d}")),
+                                    "origem": camada,
+                                    "import_id": import_id
+                                })
+                                qualidade_data.append({
+                                    "lead_bruto_id": lead_bruto_id,
+                                    "mes": mes,
+                                    "dic": sanitize_numeric(row.get(f"DIC_{mes:02d}")),
+                                    "fic": sanitize_numeric(row.get(f"FIC_{mes:02d}")),
+                                    "sem_rede": sanitize_numeric(row.get("SEMRED")),
+                                    "origem": camada,
+                                    "import_id": import_id
+                                })
+                                demanda_data.append({
+                                    "lead_bruto_id": lead_bruto_id,
+                                    "mes": mes,
+                                    "demanda_ponta": None,
+                                    "demanda_fora_ponta": None,
+                                    "demanda_total": sanitize_numeric(row.get(f"DEM_{mes:02d}")),
+                                    "demanda_contratada": sanitize_numeric(row.get("DEM_CONT")),
+                                    "origem": camada,
+                                    "import_id": import_id
+                                })
 
-                    energia_df = pd.DataFrame(energia_data)
-                    qualidade_df = pd.DataFrame(qualidade_data)
-                    demanda_df = pd.DataFrame(demanda_data)
+                        energia_df = pd.DataFrame(energia_data)
+                        qualidade_df = pd.DataFrame(qualidade_data)
+                        demanda_df = pd.DataFrame(demanda_data)
 
-                    insert_copy(cur, energia_df, "lead_energia_mensal", list(energia_df.columns))
-                    insert_copy(cur, qualidade_df, "lead_qualidade_mensal", list(qualidade_df.columns))
-                    insert_copy(cur, demanda_df, "lead_demanda_mensal", list(demanda_df.columns))
-                    conn.commit()
+                        insert_copy(cur, energia_df, "lead_energia_mensal", list(energia_df.columns))
+                        insert_copy(cur, qualidade_df, "lead_qualidade_mensal", list(qualidade_df.columns))
+                        insert_copy(cur, demanda_df, "lead_demanda_mensal", list(demanda_df.columns))
+                        conn.commit()
 
-            registrar_status(
-                prefixo, ano, camada, "completed",
-                linhas_processadas=total_inserted,
-                import_id=import_id,
-                observacoes=f"{len(energia_df)} energia | {len(demanda_df)} demanda | {len(qualidade_df)} qualidade"
-            )
-            tqdm.write(f"Importação UCBT finalizada com {total_inserted} registros brutos")
+                        status_final = "completed"
+                        obs_final = f"{len(energia_df)} energia | {len(demanda_df)} demanda | {len(qualidade_df)} qualidade"
+
+                    except Exception as e_mensais:
+                        conn.rollback()
+                        status_final = "partial"
+                        obs_final = f"Erro ao gerar mensais: {e_mensais}"
+                        tqdm.write(obs_final)
 
     except Exception as e:
         tqdm.write(f"Erro na importação de UCBT: {e}")
-        registrar_status(prefixo, ano, camada, "failed", erro=str(e), import_id=import_id)
+        obs_final = str(e)
         if modo_debug:
             raise
+
+    finally:
+        registrar_status(
+            prefixo, ano, camada, status_final,
+            linhas_processadas=total_inserted,
+            import_id=import_id,
+            observacoes=obs_final,
+            distribuidora_nome=distribuidora
+        )
+        tqdm.write(f"Status final registrado como: {status_final}")
 
 def processar_chunk(chunk_data, cur, import_id, ano, camada, dist_id, all_uc_ids):
     df = pd.DataFrame(chunk_data)
