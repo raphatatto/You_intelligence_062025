@@ -16,9 +16,9 @@ const mainLinks = [
   { href: '/mapa', label: 'Mapa interativo', icon: MapPinned },
   { href: '/leads', label: 'Dados', icon: BarChart2 },
   { href: '/mapaHeat', label: 'Mapa de calor', icon: MapIcon },
-   { href: '/detetive', label: 'Detetive', icon: Search },
-   { href: '/noticias', label: 'Notícias', icon: Bell },
-   { href: '/youknow', label: 'YouKnow', icon: Bot },
+  { href: '/detetive', label: 'Detetive', icon: Search },
+  { href: '/noticias', label: 'Notícias', icon: Bell },
+  { href: '/youknow', label: 'YouKnow', icon: Bot },
 ];
 
 const detectiveFeatures = [
@@ -132,6 +132,7 @@ export default function Sidebar() {
 
       {/* Área do usuário */}
       <div className="border-t border-gray-800 p-4">
+         <Link href="/admin">
         <div className={clsx(
           "flex items-center gap-3 p-2 rounded-lg hover:bg-gray-800/50 transition-colors cursor-pointer",
           collapsed ? "justify-center" : ""
@@ -150,6 +151,7 @@ export default function Sidebar() {
             </div>
           )}
         </div>
+        </Link>
       </div>
     </aside>
   );

@@ -6,7 +6,7 @@ const base = process.env.NEXT_PUBLIC_API_BASE ?? ''
 
 // Fetcher SP
 const fetcherTop300 = async (): Promise<Lead[]> => {
-  const res = await fetch(`${base}/leads-detalhados`)
+  const res = await fetch(`${base}/leads-geo`)
   if (!res.ok) throw new Error('Erro ao carregar os top 300 leads')
 
   const raw = await res.json()
