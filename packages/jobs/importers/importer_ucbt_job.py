@@ -34,12 +34,13 @@ def gerar_uc_id(cod_id: str, ano: int, camada: str, distribuidora_id: int) -> st
 def insert_copy(cur, df: pd.DataFrame, table: str, columns: list[str]):
     if df.empty:
         tqdm.write(f"Nenhum dado para inserir em {table}")
-        return
+        return 0
     buf = io.StringIO()
     df.to_csv(buf, index=False, header=False, columns=columns, na_rep='\\N')
     buf.seek(0)
     cur.copy_expert(f"COPY {table} ({','.join(columns)}) FROM STDIN WITH (FORMAT csv, NULL '\\N')", buf)
     tqdm.write(f"Inserido em {table}: {len(df)} registros")
+    return len(df)
 
 def importar_ucbt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, modo_debug: bool = False):
     camada = "UCBT"
@@ -47,24 +48,22 @@ def importar_ucbt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
     registrar_status(prefixo, ano, camada, "running", distribuidora_nome=distribuidora)
 
     status_final = "failed"
-    obs_final = ""
+    observacoes = ""
     total_inserted = 0
+    total_mensais = {"energia": 0, "demanda": 0, "qualidade": 0}
 
     try:
         tqdm.write("Abrindo camada 'UCBT_tab' com Fiona...")
         with fiona.open(str(gdb_path), layer="UCBT_tab") as src:
             dist_id = None
-            chunk_size = 100_000
+            chunk_size = 50_000
             chunk = []
-            all_uc_ids = []
-            all_rows = []
 
             with get_db_connection() as conn:
                 with conn.cursor() as cur:
                     for feature in tqdm(src, desc="Processando registros"):
                         row = feature["properties"]
                         row = {k.upper(): (None if str(v).strip() in ["", "None", "***", "-"] else v) for k, v in row.items()}
-                        all_rows.append(row)
 
                         if dist_id is None:
                             dist_val = sanitize_int(pd.Series([row.get("DIST")])).dropna().unique()
@@ -74,90 +73,36 @@ def importar_ucbt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
 
                         chunk.append(row)
                         if len(chunk) >= chunk_size:
-                            inserted = processar_chunk(chunk, cur, import_id, ano, camada, dist_id, all_uc_ids)
+                            inserted, mensais_info = processar_chunk(chunk, cur, import_id, ano, camada, dist_id)
                             total_inserted += inserted
+                            for k in total_mensais:
+                                total_mensais[k] += mensais_info.get(k, 0)
                             conn.commit()
                             chunk = []
                             gc.collect()
 
                     if chunk:
-                        inserted = processar_chunk(chunk, cur, import_id, ano, camada, dist_id, all_uc_ids)
+                        inserted, mensais_info = processar_chunk(chunk, cur, import_id, ano, camada, dist_id)
                         total_inserted += inserted
+                        for k in total_mensais:
+                            total_mensais[k] += mensais_info.get(k, 0)
                         conn.commit()
 
-                    if total_inserted == 0:
-                        status_final = "no_new_rows"
-                        obs_final = "Nenhum registro válido para importar."
-                        return
-
-                    try:
-                        tqdm.write("Gerando dados mensais...")
-
-                        df_ids = pd.read_sql("""
-                            SELECT id AS lead_bruto_id, uc_id FROM lead_bruto WHERE import_id = %s
-                        """, conn, params=(import_id,))
-                        ucid_map = df_ids.set_index("uc_id")["lead_bruto_id"].to_dict()
-
-                        energia_data, qualidade_data, demanda_data = [], [], []
-
-                        for row in tqdm(all_rows, desc="Mensais"):
-                            cod_id = row.get("COD_ID")
-                            uc_id = gerar_uc_id(cod_id, ano, camada, dist_id)
-                            lead_bruto_id = ucid_map.get(uc_id)
-                            if not lead_bruto_id:
-                                continue
-
-                            for mes in range(1, 13):
-                                energia_data.append({
-                                    "lead_bruto_id": lead_bruto_id,
-                                    "mes": mes,
-                                    "energia_ponta": None,
-                                    "energia_fora_ponta": None,
-                                    "energia_total": sanitize_numeric(row.get(f"ENE_{mes:02d}")),
-                                    "origem": camada,
-                                    "import_id": import_id
-                                })
-                                qualidade_data.append({
-                                    "lead_bruto_id": lead_bruto_id,
-                                    "mes": mes,
-                                    "dic": sanitize_numeric(row.get(f"DIC_{mes:02d}")),
-                                    "fic": sanitize_numeric(row.get(f"FIC_{mes:02d}")),
-                                    "sem_rede": sanitize_numeric(row.get("SEMRED")),
-                                    "origem": camada,
-                                    "import_id": import_id
-                                })
-                                demanda_data.append({
-                                    "lead_bruto_id": lead_bruto_id,
-                                    "mes": mes,
-                                    "demanda_ponta": None,
-                                    "demanda_fora_ponta": None,
-                                    "demanda_total": sanitize_numeric(row.get(f"DEM_{mes:02d}")),
-                                    "demanda_contratada": sanitize_numeric(row.get("DEM_CONT")),
-                                    "origem": camada,
-                                    "import_id": import_id
-                                })
-
-                        energia_df = pd.DataFrame(energia_data)
-                        qualidade_df = pd.DataFrame(qualidade_data)
-                        demanda_df = pd.DataFrame(demanda_data)
-
-                        insert_copy(cur, energia_df, "lead_energia_mensal", list(energia_df.columns))
-                        insert_copy(cur, qualidade_df, "lead_qualidade_mensal", list(qualidade_df.columns))
-                        insert_copy(cur, demanda_df, "lead_demanda_mensal", list(demanda_df.columns))
-                        conn.commit()
-
-                        status_final = "completed"
-                        obs_final = f"{len(energia_df)} energia | {len(demanda_df)} demanda | {len(qualidade_df)} qualidade"
-
-                    except Exception as e_mensais:
-                        conn.rollback()
-                        status_final = "partial"
-                        obs_final = f"Erro ao gerar mensais: {e_mensais}"
-                        tqdm.write(obs_final)
+        if total_inserted == 0:
+            status_final = "no_new_rows"
+            observacoes = "Nenhum registro válido para importar."
+        else:
+            status_final = "completed"
+            observacoes = (
+                f"{total_inserted} registros brutos | "
+                f"{total_mensais['energia']} energia | "
+                f"{total_mensais['demanda']} demanda | "
+                f"{total_mensais['qualidade']} qualidade"
+            )
 
     except Exception as e:
         tqdm.write(f"Erro na importação de UCBT: {e}")
-        obs_final = str(e)
+        observacoes = str(e)
         if modo_debug:
             raise
 
@@ -165,15 +110,15 @@ def importar_ucbt(gdb_path: Path, distribuidora: str, ano: int, prefixo: str, mo
         registrar_status(
             prefixo, ano, camada, status_final,
             linhas_processadas=total_inserted,
+            observacoes=observacoes,
             import_id=import_id,
-            observacoes=obs_final,
             distribuidora_nome=distribuidora
         )
         tqdm.write(f"Status final registrado como: {status_final}")
 
-def processar_chunk(chunk_data, cur, import_id, ano, camada, dist_id, all_uc_ids):
+def processar_chunk(chunk_data, cur, import_id, ano, camada, dist_id):
     df = pd.DataFrame(chunk_data)
-    df = df[df["COD_ID"].notna()]
+    df = df[df["COD_ID"].notna()].copy()
 
     for col in RELEVANT_COLUMNS:
         if col not in df.columns:
@@ -183,7 +128,6 @@ def processar_chunk(chunk_data, cur, import_id, ano, camada, dist_id, all_uc_ids
         gerar_uc_id(cod, ano, camada, dist_id)
         for cod in df["COD_ID"]
     ]
-    all_uc_ids.extend(df["uc_id"].tolist())
 
     df["cod_id"] = df["COD_ID"]
     df["import_id"] = import_id
@@ -209,20 +153,74 @@ def processar_chunk(chunk_data, cur, import_id, ano, camada, dist_id, all_uc_ids
 
     df.drop_duplicates(subset="uc_id", inplace=True)
 
-    colunas_validas = [
+    colunas_bruto = [
         "uc_id", "import_id", "cod_id", "distribuidora_id", "origem", "ano", "status",
         "data_conexao", "cnae", "grupo_tensao", "modalidade", "tipo_sistema", "situacao",
         "classe", "segmento", "subestacao", "municipio_id", "bairro", "cep", "pac",
         "pn_con", "descricao"
     ]
 
-    df = df[colunas_validas]
+    inserted = insert_copy(cur, df, "lead_bruto", colunas_bruto)
 
-    if df.empty:
-        return 0
+    if inserted == 0:
+        return 0, {"energia": 0, "demanda": 0, "qualidade": 0}
 
-    insert_copy(cur, df, "lead_bruto", colunas_validas)
-    return len(df)
+    ucid_map = {uc_id: gerar_uc_id(cod, ano, camada, dist_id)
+                for uc_id, cod in zip(df["uc_id"], df["COD_ID"])}
+
+    cur.execute("SELECT id AS lead_bruto_id, uc_id FROM lead_bruto WHERE import_id = %s AND uc_id = ANY(%s)",
+                (import_id, list(df["uc_id"])))
+    id_map = dict(cur.fetchall())
+
+    energia_rows, demanda_rows, qualidade_rows = [], [], []
+
+    for _, row in df.iterrows():
+        lead_bruto_id = id_map.get(row["uc_id"])
+        if not lead_bruto_id:
+            continue
+        for mes in range(1, 13):
+            energia_rows.append({
+                "lead_bruto_id": lead_bruto_id,
+                "mes": mes,
+                "energia_ponta": None,
+                "energia_fora_ponta": None,
+                "energia_total": sanitize_numeric(row.get(f"ENE_{mes:02d}")),
+                "origem": camada,
+                "import_id": import_id
+            })
+            demanda_rows.append({
+                "lead_bruto_id": lead_bruto_id,
+                "mes": mes,
+                "demanda_ponta": None,
+                "demanda_fora_ponta": None,
+                "demanda_total": sanitize_numeric(row.get(f"DEM_{mes:02d}")),
+                "demanda_contratada": sanitize_numeric(row.get("DEM_CONT")),
+                "origem": camada,
+                "import_id": import_id
+            })
+            qualidade_rows.append({
+                "lead_bruto_id": lead_bruto_id,
+                "mes": mes,
+                "dic": sanitize_numeric(row.get(f"DIC_{mes:02d}")),
+                "fic": sanitize_numeric(row.get(f"FIC_{mes:02d}")),
+                "sem_rede": sanitize_numeric(row.get("SEMRED")),
+                "origem": camada,
+                "import_id": import_id
+            })
+
+    energia_df = pd.DataFrame(energia_rows)
+    demanda_df = pd.DataFrame(demanda_rows)
+    qualidade_df = pd.DataFrame(qualidade_rows)
+
+    energia_count = insert_copy(cur, energia_df, "lead_energia_mensal", list(energia_df.columns))
+    demanda_count = insert_copy(cur, demanda_df, "lead_demanda_mensal", list(demanda_df.columns))
+    qualidade_count = insert_copy(cur, qualidade_df, "lead_qualidade_mensal", list(qualidade_df.columns))
+
+    return inserted, {
+        "energia": energia_count,
+        "demanda": demanda_count,
+        "qualidade": qualidade_count
+    }
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
