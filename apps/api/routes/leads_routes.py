@@ -29,3 +29,5 @@ async def detalhar_lead(uc_id: str, db: AsyncSession = Depends(get_session)):
         raise HTTPException(status_code=404, detail="Lead não encontrado")
     # se get_lead já retornar dict, ok; se retornar ORM, valide:
     return LeadDetalhadoOut.model_validate(lead, from_attributes=True)
+
+
