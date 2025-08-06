@@ -1,104 +1,31 @@
-from fastapi import APIRouter, Depends, Query
-from typing import Optional
+# apps/api/routes/leads_routes.py
+from fastapi import APIRouter, Depends, Query, HTTPException
+from typing import Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.api.schemas.lead_schema import (
-    LeadDetalhado,
-    LeadResumo,
-    LeadQualidade,
-    LeadMapOut,
-    LeadList
+    LeadDetalhadoOut
 )
-
 from apps.api.services.lead.lead_service import (
-    buscar_leads,
     get_lead,
-    get_resumo,
-    get_map_points,
-    get_qualidade,
-    heatmap_points,
     get_leads_detalhados,
 )
-
 from packages.database.session import get_session
 
-router = APIRouter(prefix="/v1/leads", tags=["leads"])
+router = APIRouter(prefix="/leads", tags=["leads"])
 
-# 🔍 Listar leads com filtros e paginação
-@router.get("/", response_model=LeadList)
-async def listar_leads(
-    estado: Optional[str] = None,
-    tipo: Optional[str] = None,
-    distribuidora: Optional[str] = None,
-    segmento: Optional[str] = None,
-    ordem: Optional[str] = "padrao",
-    busca: Optional[str] = None,
-    skip: int = Query(0, ge=0),
-    limit: int = Query(300, ge=1, le=500),
+@router.get("/detalhados", response_model=List[LeadDetalhadoOut])
+async def listar_leads_detalhados(
+    limit: int = Query(300, ge=1, le=1000),
     db: AsyncSession = Depends(get_session),
 ):
-    return await buscar_leads(
-        db=db,
-        estado=estado,
-        tipo=tipo,
-        distribuidora=distribuidora,
-        segmento=segmento,
-        ordem=ordem,
-        busca=busca,
-        skip=skip,
-        limit=limit,
-    )
+    rows = await get_leads_detalhados(db, limit=limit)
+    return [LeadDetalhadoOut.model_validate(r, from_attributes=True) for r in rows]
 
-
-# 📋 Detalhamento de um lead específico
-@router.get("/{uc_id}", response_model=LeadDetalhado)
-async def detalhar_lead(
-    uc_id: str,
-    db: AsyncSession = Depends(get_session)
-):
-    return await get_lead(db, uc_id)
-
-
-# 📊 Resumo estatístico de leads
-@router.get("/resumo/estatisticas", response_model=LeadResumo)
-async def resumo_leads(
-    estado: Optional[str] = None,
-    municipio: Optional[str] = None,
-    segmento: Optional[str] = None,
-    db: AsyncSession = Depends(get_session)
-):
-    return await get_resumo(db, estado, municipio, segmento)
-
-
-# 📈 Qualidade DIC/FIC por lead
-@router.get("/{uc_id}/qualidade", response_model=LeadQualidade)
-async def qualidade_lead(
-    uc_id: str,
-    db: AsyncSession = Depends(get_session)
-):
-    return await get_qualidade(db, uc_id)
-
-
-# 🗺️ Pontos para mapa
-@router.get("/map", response_model=list[LeadMapOut])
-async def pontos_mapa(
-    status: Optional[str] = None,
-    distribuidora: Optional[str] = None,
-    limit: int = Query(500, ge=1, le=10000),
-    db: AsyncSession = Depends(get_session),
-):
-    return await get_map_points(db, status, distribuidora, limit)
-
-
-# 🔥 Heatmap de concentração
-@router.get("/heatmap", response_model=list[tuple])
-async def heatmap(
-    segmento: Optional[str] = None,
-    db: AsyncSession = Depends(get_session),
-):
-    return await heatmap_points(db, segmento)
-
-
-@router.get("/leads-detalhados")
-async def listar_leads_detalhados(db:AsyncSession = Depends(get_session)):
-    return await get_leads_detalhados(db)
+@router.get("/{uc_id}", response_model=LeadDetalhadoOut)
+async def detalhar_lead(uc_id: str, db: AsyncSession = Depends(get_session)):
+    lead = await get_lead(db, uc_id)
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead não encontrado")
+    # se get_lead já retornar dict, ok; se retornar ORM, valide:
+    return LeadDetalhadoOut.model_validate(lead, from_attributes=True)

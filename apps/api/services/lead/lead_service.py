@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 from apps.api.schemas.lead_schema import (
-    LeadDetalhado,
+    LeadDetalhadoOut,
     LeadQualidade,
     LeadResumo,
     LeadMapOut,
@@ -9,6 +9,10 @@ from apps.api.schemas.lead_schema import (
     LeadOut,
 
 )
+
+from sqlalchemy import select
+from apps.api.models.lead_model import LeadCompletoDetalhado
+
 import json
 
 # 🔢 Parser auxiliar para arrays de texto
@@ -87,7 +91,7 @@ async def buscar_leads(
 
 
 # 📋 Detalhamento individual
-async def get_lead(db: AsyncSession, uc_id: str) -> LeadDetalhado | None:
+async def get_lead(db: AsyncSession, uc_id: str) -> LeadDetalhadoOut | None:
     query = text("""
     SELECT * 
     FROM intel_lead.mv_lead_completo_detalhado
@@ -96,7 +100,7 @@ async def get_lead(db: AsyncSession, uc_id: str) -> LeadDetalhado | None:
 
     result = await db.execute(query, {"uc_id": uc_id})
     row = result.mappings().first()
-    return LeadDetalhado(**row) if row else None
+    return LeadDetalhadoOut(**row) if row else None
 
 
 # 📉 Qualidade DIC/FIC
@@ -108,22 +112,18 @@ async def get_qualidade(db: AsyncSession, uc_id: str) -> LeadQualidade | None:
         WHERE lb.uc_id = :uc_id
         LIMIT 1
     """)
-    result = await db.execute({"uc_id": uc_id})
+    result = await db.execute(query, {"uc_id": uc_id})  # 👈 agora sim
     row = result.mappings().first()
-
     if not row:
         return None
-
     dic_array = parse_array_text(row["dic"])
     fic_array = parse_array_text(row["fic"])
-
     return LeadQualidade(
         dicMes=dic_array,
         ficMes=fic_array,
         dicMed=round(sum(dic_array) / len(dic_array), 2) if dic_array else None,
         ficMed=round(sum(fic_array) / len(fic_array), 2) if fic_array else None,
     )
-
 
 # 🗺️ Pontos para mapa
 async def get_map_points(
@@ -195,16 +195,7 @@ async def get_resumo(
     )
 
 
-async def get_leads_detalhados(db: AsyncSession) -> list[LeadDetalhado]:
-    print("🚀 Função get_leads_detalhados chamada!")
-    try:
-        query = text("""SELECT * FROM intel_lead.mv_lead_completo_detalhado""")
-        result = await db.execute(query)
-        rows = result.mappings().all()
-        print("📦 Total de registros:", len(rows))
-        if rows:
-            print("🔍 Primeira linha:", rows[0])
-        return [LeadDetalhado(**row) for row in rows]
-    except Exception as e:
-        print("❌ ERRO:", e)
-        raise
+async def get_leads_detalhados(db, limit: int = 300):
+    stmt = select(LeadCompletoDetalhado).limit(limit)
+    result = await db.execute(stmt)
+    return result.scalars().all()
