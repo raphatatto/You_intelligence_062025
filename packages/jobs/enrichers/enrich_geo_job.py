@@ -146,3 +146,6 @@ if __name__ == "__main__":
 
     lead_ids = sys.argv[1:]
     enriquecer_leads_google(lead_ids)
+
+# Alias para compatibilidade com outras partes do sistema
+enrich_geo_info = enriquecer_leads_google

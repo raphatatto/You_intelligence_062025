@@ -122,3 +122,5 @@ if __name__ == "__main__":
 
     lead_ids = sys.argv[1:]
     enriquecer_leads_cnpj(lead_ids)
+
+enrich_cnpj = enriquecer_leads_cnpj

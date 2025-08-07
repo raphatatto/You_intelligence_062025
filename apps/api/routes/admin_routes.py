@@ -8,7 +8,11 @@ from packages.database.session import get_session
 from packages.jobs.download.download_gdb import baixar_gdb  # 🚨 precisa estar implementado corretamente
 from apps.api.services import admin_service
 
-router = APIRouter()
+router = APIRouter(
+    prefix="/v1/admin",
+    tags=["Admin"]  # <- isso resolve!
+)
+
 
 # ----------------------
 # 📦 IMPORTAÇÕES

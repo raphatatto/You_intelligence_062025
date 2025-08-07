@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 from datetime import datetime, date
 
 # -------------------------------
@@ -158,3 +158,50 @@ class ImportStatusOut(BaseModel):
     camada: str
     status: str
     data_execucao: datetime
+
+
+
+class EmpresaInfo(BaseModel):
+    razao_social: Optional[str]
+    nome_fantasia: Optional[str]
+    cnpj: Optional[str]
+    cnae: Optional[str]
+    cnae_descricao: Optional[str]
+    email: Optional[str]
+    telefone: Optional[str]
+    endereco: Optional[str]
+
+
+class GeoInfo(BaseModel):
+    latitude: Optional[float]
+    longitude: Optional[float]
+    cep: Optional[str]
+
+
+class DiagnosticoUC(BaseModel):
+    pontuacoes: Optional[dict]
+    notas: Optional[dict]
+    sugestoes: Optional[List[str]]
+    alerta: Optional[str]
+
+
+class UnidadeConsumidora(BaseModel):
+    uc_id: Optional[str]
+    latitude: Optional[float]
+    longitude: Optional[float]
+    municipio: Optional[str]
+    uf: Optional[str]
+    classe: Optional[str]
+    modalidade: Optional[str]
+    grupo_tensao: Optional[str]
+    distancia_metros: Optional[float]
+
+    
+class DetetiveResponse(BaseModel):
+    entrada: Dict[str, Any]
+    logs: List[str]
+    etapas: Dict[str, Any]
+    possiveis_matches: List[Dict[str, Any]]
+    match_principal: Optional[Dict[str, Any]] = None
+    diagnostico: Optional[Dict[str, Any]] = None
+    score_confianca: float
