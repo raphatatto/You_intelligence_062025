@@ -49,7 +49,7 @@ export default function DetectivePage() {
       </header>
 
       {/* Conteúdo principal */}
-      <main className="flex-1 overflow-hidden p-6">
+      <main className="flex-1 overflow-hidden p-6 ">
         <Tabs defaultValue="overview" className="h-full flex flex-col">
           <TabsList className="grid w-full grid-cols-4 bg-gray-900">
             <TabsTrigger value="overview" className="py-3">

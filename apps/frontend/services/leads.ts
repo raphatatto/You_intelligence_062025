@@ -38,7 +38,7 @@ const fetcherTop300 = async (): Promise<Lead[]> => {
 }
 
 export function useLeads() {
-  const { data, error } = useSWR<Lead[]>('v1/leads/detalhados?limit=1', fetcherTop300, {
+  const { data, error } = useSWR<Lead[]>('/v1/leads/detalhados?limit=1', fetcherTop300, {
     revalidateOnFocus: false,
     onErrorRetry: () => {},
   })

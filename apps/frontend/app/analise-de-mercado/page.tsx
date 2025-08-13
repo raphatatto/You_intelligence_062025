@@ -13,7 +13,7 @@ export default function MarketAnalysisPage() {
   return (
     <div className="flex flex-col h-full">
       {/* Cabeçalho */}
-      <header className="border-b border-gray-700 p-6">
+      <header className="border-b border-gray-700 p-6 ">
         <div className="flex items-center gap-4">
           <BarChart4 className="text-blue-400" size={28} />
           <div>
@@ -24,7 +24,7 @@ export default function MarketAnalysisPage() {
       </header>
 
       {/* Indicadores-chave */}
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-6 border-b border-gray-700">
+      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-6 border-b border-gray-700 text-white">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-gray-400">Preço Médio</CardTitle>
@@ -42,7 +42,7 @@ export default function MarketAnalysisPage() {
             <Activity className="h-4 w-4 text-blue-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">45.230 MW</div>
+            <div className="text-2xl font-bold text-white">45.230 MW</div>
             <p className="text-xs text-green-400 mt-1">+1.1% em 30 dias</p>
           </CardContent>
         </Card>
@@ -53,18 +53,18 @@ export default function MarketAnalysisPage() {
             <Battery className="h-4 w-4 text-green-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">78.450 MW</div>
+            <div className="text-2xl font-bold text-white">78.450 MW</div>
             <p className="text-xs text-green-400 mt-1">+5.3% no último ano</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 text-white">
             <CardTitle className="text-sm font-medium text-gray-400">Participação Renovável</CardTitle>
             <Sun className="h-4 w-4 text-emerald-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">62%</div>
+            <div className="text-2xl font-bold text-white">62%</div>
             <p className="text-xs text-red-400 mt-1">-3.2% em relação ao ano passado</p>
           </CardContent>
         </Card>

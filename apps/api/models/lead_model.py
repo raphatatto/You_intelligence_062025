@@ -56,3 +56,4 @@ class LeadCompletoDetalhado(Base):
     media_energia_total = Column(Float, nullable=True)
     media_demanda_ponta = Column(Float, nullable=True)
     media_demanda_fora = Column(Float, nullable=True)
+

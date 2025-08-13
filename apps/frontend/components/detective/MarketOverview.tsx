@@ -38,9 +38,9 @@ export default function MarketOverview() {
       </div>
 
       {/* Gráficos e Análises */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 ">
         <div className="bg-gray-800/50 rounded-lg p-4 lg:col-span-2 h-64">
-          <h3 className="font-medium mb-3">Variação de Preços (Últimos 30 dias)</h3>
+          <h3 className="font-medium mb-3 text-white">Variação de Preços (Últimos 30 dias)</h3>
           <div className="h-48 bg-gray-900/30 rounded flex items-center justify-center text-gray-500">
             Gráfico será exibido aqui
           </div>

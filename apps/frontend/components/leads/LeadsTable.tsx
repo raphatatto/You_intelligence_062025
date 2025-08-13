@@ -108,9 +108,9 @@ export default function LeadsTable({ rows }: Props) {
                 </td>
                 
                 <td className="px-4 py-3">
-                  <Tooltip content={DISTRIBUIDORAS_MAP[lead.distribuidora] || lead.distribuidora || '—'}>
+                  <Tooltip content={lead.distribuidora || '—'}>
                     <div className="max-w-[180px] truncate text-zinc-300">
-                      {DISTRIBUIDORAS_MAP[lead.distribuidora] ?? lead.distribuidora ?? '—'}
+                      {lead.distribuidora ?? '—'}
                     </div>
                   </Tooltip>
                 </td>

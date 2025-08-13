@@ -30,9 +30,13 @@ export default function LeadsPage() {
   const { order, setOrder } = useSort()
   const { leads, isLoading, error } = useLeads()
 
-  const estados = useMemo<string[]>(() => {
-    return Array.from(new Set(leads.map((l) => l.estado).filter(Boolean))).sort()
-  }, [leads])
+  const estados = useMemo(() => {
+  const values = leads
+    .map(l => l.estado)
+    .filter((uf): uf is string => typeof uf === 'string' && uf.length > 0)
+
+  return Array.from(new Set(values)).sort()
+}, [leads])
 
   const leadsFiltrados = useMemo<Lead[]>(() => {
     let arr = [...leads]
@@ -52,7 +56,7 @@ export default function LeadsPage() {
       arr = arr.filter((l) => l.cnae === filtroSegmento)
 
     if (filtroTipo)
-      arr = arr.filter((l) => l.tipo === filtroTipo)
+      arr = arr.filter((l) => l.classe === filtroTipo)
 
     if (busca) {
       const term = stripDiacritics(busca.toLowerCase())
@@ -60,8 +64,8 @@ export default function LeadsPage() {
       arr = arr.filter((l) => {
         const estado = stripDiacritics(l.estado?.toLowerCase() ?? '')
         const cnae = stripDiacritics(l.cnae?.toLowerCase() ?? '')
-        const distribuidora = stripDiacritics(DISTRIBUIDORAS_MAP[l.distribuidora]?.toLowerCase() ?? '')
-        const segmentoNome = stripDiacritics(CNAE_SEGMENTOS[l.cnae]?.toLowerCase() ?? '')
+        const distribuidora = stripDiacritics(l.distribuidora?.toLowerCase() ?? '')
+        const segmentoNome = stripDiacritics(l.cnae?.toLowerCase() ?? '')
         const segmentoLead = stripDiacritics(l.segmento?.toLowerCase() ?? '')
 
         return (
