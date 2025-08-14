@@ -5,7 +5,7 @@ export type Lead = {
   cnae?: string | null
   cnaeDescricao?: string | null
   segmento?: string | null
-  classe?: string | null
+  tipo?: string | null
   bairro?: string | null
   cep?: string | null
   distribuidora?: string | null

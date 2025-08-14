@@ -7,7 +7,7 @@ const base = process.env.NEXT_PUBLIC_API_BASE ?? ''
 // Fetcher SP
 
 const fetcherTop300 = async (): Promise<Lead[]> => {
-  const res = await fetch(`${base}/v1/leads/detalhados?limit=1000`)
+  const res = await fetch(`${base}/leads-geo`)
   if (!res.ok) throw new Error('Erro ao carregar os leads detalhados')
 
   const raw = await res.json()
@@ -20,7 +20,7 @@ const fetcherTop300 = async (): Promise<Lead[]> => {
       descricao: item.descricao ?? item.DESCR ?? null,
       cnae,
       segmento: CNAE_SEGMENTOS[cnae] ?? item.segmento_desc ?? null,
-      classe: item.classe ?? null,
+      tipo: item.tipo ?? null,
       bairro: item.bairro ?? item.BRR ?? null,
       cep: item.cep ?? null,
       distribuidora: item.distribuidora_nome ?? item.DIST ?? null,
@@ -38,7 +38,7 @@ const fetcherTop300 = async (): Promise<Lead[]> => {
 }
 
 export function useLeads() {
-  const { data, error } = useSWR<Lead[]>('/v1/leads/detalhados?limit=1', fetcherTop300, {
+  const { data, error } = useSWR<Lead[]>('/leads-geo', fetcherTop300, {
     revalidateOnFocus: false,
     onErrorRetry: () => {},
   })
