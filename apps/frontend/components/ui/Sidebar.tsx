@@ -19,7 +19,7 @@ const mainLinks = [
   { href: '/detetive', label: 'Detetive', icon: Search },
   { href: '/noticias', label: 'Notícias', icon: Bell },
   { href: '/youknow', label: 'YouKnow', icon: Bot },
-  { href: '/analise-de-mercado', label: 'Análise de Mercado', icon: GitGraph },
+  //{ href: '/analise-de-mercado', label: 'Análise de Mercado', icon: GitGraph },
 ];
 
 const detectiveFeatures = [
@@ -80,7 +80,7 @@ export default function Sidebar() {
         ))}
 
         {/* Seção Detetive */}
-        <div className="mt-6">
+        {/* <div className="mt-6">
           <button
             onClick={() => setDetectiveExpanded(!detectiveExpanded)}
             className={clsx(
@@ -128,7 +128,7 @@ export default function Sidebar() {
               ))}
             </div>
           )}
-        </div>
+        </div> */}
       </nav>
 
       {/* Área do usuário */}
