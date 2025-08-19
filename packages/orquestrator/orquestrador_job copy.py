@@ -16,11 +16,11 @@ from packages.jobs.download.download_gdb import baixar_gdb
 DOWNLOADS_DIR = Path("data/downloads")
 
 # Camadas que serão processadas
-CAMADAS = ["UCAT", "UCMT", "UCBT", "PONNOT"]
+CAMADAS = ["UCAT", "UCMT", "PONNOT"]
 IMPORTERS = {
     "UCAT": "packages/jobs/importers/importer_ucat_job.py",
     "UCMT": "packages/jobs/importers/importer_ucmt_job.py",
-    "UCBT": "packages/jobs/importers/importer_ucbt_job.py",
+    # "UCBT": "packages/jobs/importers/importer_ucbt_job.py",
     "PONNOT": "packages/jobs/importers/importer_ponnot_job.py",
 }
 

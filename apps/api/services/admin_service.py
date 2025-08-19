@@ -1,91 +1,144 @@
-from sqlalchemy.ext.asyncio import AsyncSession
+from __future__ import annotations
+
+from typing import Any
+
+from pydantic import BaseModel
 from sqlalchemy import text
-from uuid import uuid4
-from apps.api.schemas.lead_schema import ImportStatusOut
-from packages.jobs.download.download_gdb import baixar_gdb
-from packages.orquestrator.orquestrador_job import orquestrar_importacao
-from packages.jobs.enrichers.enrich_geo_job import enrich_geo_info
-from packages.jobs.enrichers.enrich_cnpj_job import enrich_cnpj
-from packages.jobs.enrichers.pipeline import rodar_pipeline_enriquecimento
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from packages.jobs.queue import enqueue
 
-# 🔍 Listar status das importações
-async def listar_status_importacoes(db: AsyncSession) -> list[ImportStatusOut]:
-    query = text("""
-        SELECT distribuidora, ano, camada, status, data_execucao
-        FROM intel_lead.import_status
-        ORDER BY data_execucao DESC
+# Caminhos dos importers (iguais aos que usamos no orquestrador)
+IMPORTERS = {
+    "UCAT":   "packages/jobs/importers/importer_ucat_job.py",
+    "UCMT":   "packages/jobs/importers/importer_ucmt_job.py",
+    "UCBT":   "packages/jobs/importers/importer_ucbt_job.py",
+    "PONNOT": "packages/jobs/importers/importer_ponnot_job.py",
+}
+
+class ImportacaoPayload(BaseModel):
+    distribuidora: str
+    ano: int
+    camadas: list[str]
+    url: str | None = None
+
+# ============== Import / Download orchestration (enfileira) ==============
+
+async def executar_importacao(payload: ImportacaoPayload) -> dict[str, Any]:
+    dist = payload.distribuidora
+    ano = int(payload.ano)
+    gdb_name = f"{dist}_{ano}"
+    gdb_path = f"data/downloads/{gdb_name}.gdb"
+
+    # 1) Download job (worker resolve URL via catálogo; se você quiser forçar, passe url=...)
+    download_job = enqueue({
+        "download": {
+            "distribuidora": dist,
+            "ano": ano,
+            "max_kbps": 256,
+            # "url": payload.url,  # descomente para forçar URL específica
+            "nome_destino": gdb_name,
+        }
+    }, priority=5)
+
+    # 2) Importers selecionados
+    job_ids: list[str] = []
+    for camada in payload.camadas:
+        cam = camada.upper().strip()
+        script = IMPORTERS.get(cam)
+        if not script:
+            continue
+
+        env = {}
+        if cam == "UCBT":
+            env.update({
+                "UCBT_CHUNK_SIZE": "3000",
+                "UCBT_ROWS_PER_COPY": "15000",
+                "UCBT_SLEEP_MS_BETWEEN": "120",
+            })
+        if cam == "PONNOT":
+            env.update({
+                "PONNOT_CHUNK_SIZE": "4000",
+                "PONNOT_SLEEP_MS_BETWEEN": "80",
+            })
+
+        job_id = enqueue({
+            "script": script,
+            "args": ["--gdb", gdb_path, "--distribuidora", dist, "--ano", str(ano)],
+            "env": env,
+        }, priority=5)
+        job_ids.append(job_id)
+
+    return {
+        "status": "queued",
+        "download_job": download_job,
+        "import_jobs": job_ids,
+    }
+
+# ============== Métricas / Listagens rápidas ==============
+
+async def listar_status_importacoes(db: AsyncSession):
+    q = text("""
+        SELECT id, status, tries, priority, worker_id, created_at, started_at, finished_at,
+               (payload->>'script') AS script,
+               (payload->'download') IS NOT NULL AS has_download
+        FROM import_queue
+        ORDER BY created_at DESC
         LIMIT 100
     """)
-    result = await db.execute(query)
-    rows = result.mappings().all()
-    return [ImportStatusOut(**dict(r)) for r in rows]
+    rs = await db.execute(q)
+    return [dict(r._mapping) for r in rs.fetchall()]
 
-
-# 🚀 Executar importação completa (GDB já existente ou baixado antes)
-async def executar_importacao(payload):
-    import_id = str(uuid4())
-
-    # Orquestrar com as camadas corretas
-    orquestrar_importacao(
-        distribuidora=payload.distribuidora,
-        prefixo=payload.prefixo,
-        ano=payload.ano,
-        url=payload.url,
-        camadas=payload.camadas,
-        import_id=import_id
-    )
-
-    return {"status": "ok", "import_id": import_id}
-
-
-# 🧠 Enriquecimento global (tudo que estiver com status 'raw')
-async def enriquecer_global():
-    return rodar_pipeline_enriquecimento()
-
-
-# 🧠 Enriquecimento por coordenadas
-async def enriquecer_google(payload):
-    return enrich_geo_info(payload.lead_ids)
-
-
-# 🧠 Enriquecimento por CNPJ
-async def enriquecer_cnpj(payload):
-    return enrich_cnpj(payload.lead_ids)
-
-
-# 📊 Contagem de leads por status
 async def contagem_por_status(db: AsyncSession):
-    query = text("""
-        SELECT status, COUNT(*) AS total
+    q = text("""
+        SELECT COALESCE(situacao,'(null)') AS situacao, COUNT(*) AS qtde
         FROM intel_lead.lead_bruto
-        GROUP BY status
+        GROUP BY 1
+        ORDER BY 2 DESC
+        LIMIT 50
     """)
-    result = await db.execute(query)
-    return [{"status": row.status, "total": row.total} for row in result]
+    rs = await db.execute(q)
+    return [dict(r._mapping) for r in rs.fetchall()]
 
-
-# 📊 Contagem por distribuidora
 async def contagem_por_distribuidora(db: AsyncSession):
-    query = text("""
-        SELECT distribuidora_id, COUNT(*) AS total
+    q = text("""
+        SELECT COALESCE(distribuidora_id::text,'(null)') AS distribuidora_id, COUNT(*) AS qtde
         FROM intel_lead.lead_bruto
-        GROUP BY distribuidora_id
-    """)
-    result = await db.execute(query)
-    return [{"distribuidora": row.distribuidora_id, "total": row.total} for row in result]
-
-
-# 📦 Leads brutos com status = raw (admin visual)
-async def listar_leads_raw(db: AsyncSession):
-    query = text("""
-        SELECT 
-            uc_id, bairro, cep, municipio_id, distribuidora_id,
-            status, latitude, longitude
-        FROM intel_lead.lead_bruto
-        WHERE status = 'raw'
-        ORDER BY import_id DESC
+        GROUP BY 1
+        ORDER BY 2 DESC
         LIMIT 100
     """)
-    result = await db.execute(query)
-    return [dict(row) for row in result.fetchall()]
+    rs = await db.execute(q)
+    return [dict(r._mapping) for r in rs.fetchall()]
+
+async def listar_leads_raw(db: AsyncSession):
+    q = text("""
+        SELECT id, uc_id, distribuidora_id, ano, origem, cnae, municipio_id, bairro, cep
+        FROM intel_lead.lead_bruto
+        ORDER BY id DESC
+        LIMIT 200
+    """)
+    rs = await db.execute(q)
+    return [dict(r._mapping) for r in rs.fetchall()]
+
+# ============== Enriquecimentos (stubs seguros) ==============
+
+async def enriquecer_global():
+    # aqui você pode enfileirar pipelines de enriquecimento, se quiser
+    return {"status": "queued", "message": "pipeline de enriquecimento global ainda não configurado"}
+
+async def enriquecer_google(payload):
+    return {"status": "queued", "message": "enriquecimento GEO ainda não configurado", "lead_ids": payload.lead_ids}
+
+async def enriquecer_cnpj(payload):
+    return {"status": "queued", "message": "enriquecimento CNPJ ainda não configurado", "lead_ids": payload.lead_ids}
+
+# ============== Ops de banco ==============
+
+async def refresh_materializadas(db: AsyncSession):
+    await db.execute(text("REFRESH MATERIALIZED VIEW intel_lead.mv_lead_completo_detalhado"))
+    await db.execute(text("REFRESH MATERIALIZED VIEW intel_lead.resumo_leads_distribuidora"))
+    await db.execute(text("REFRESH MATERIALIZED VIEW intel_lead.resumo_energia_municipio"))
+    await db.execute(text("REFRESH MATERIALIZED VIEW intel_lead.resumo_leads_ano_camada"))
+    await db.commit()
+    return {"status": "ok", "msg": "Materializadas atualizadas com sucesso"}
