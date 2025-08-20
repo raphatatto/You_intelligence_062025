@@ -1,13 +1,7 @@
 // utils/analytics.ts
 import { Lead } from '@/app/types/lead';
+import { toNumberBR } from '@/utils/transformarDadosMensais'; 
 
-export function countByEstado(leads: Lead[]) {
-  const counts: Record<string, number> = {};
-  for (const l of leads) {
-    counts[l.estado] = (counts[l.estado] || 0) + 1;
-  }
-  return Object.entries(counts).map(([estado, total]) => ({ estado, total }));
-}
 
 export function countByDistribuidora(leads: Lead[]) {
   const contagem: Record<string, number> = {};
@@ -33,20 +27,37 @@ export function top10CNAE(leads: Lead[]) {
     .map(([nome, total]) => ({ nome, total }));
 }
 
-export function calcularEnergiaMapeada(leads: Lead[]) {
-  const horasMes = 30 * 24; // 720h
-  const totalKWh = leads.reduce((soma, l) => soma + ((l.potencia ?? 0) * horasMes), 0);
-  const totalMWh = totalKWh / 1000;
-  return totalMWh;
+
+export function calcularEnergiaMapeada(leads: Lead[]): number {
+  let total = 0;
+
+  leads.forEach((lead) => {
+    for (let i = 1; i <= 12; i++) {
+      const key = `ENE_${String(i).padStart(2, '0')}`;
+      const valor = (lead as any)[key];
+      total += toNumberBR(valor);
+    }
+  });
+
+  return total;
 }
 
 
 export function filtrarLeadsComPotencial(leads: Lead[], potenciaMinima = 100): Lead[] {
-  return leads.filter(l =>
-    l.potencia !== undefined &&
-    l.potencia >= potenciaMinima &&
-    l.cnae &&
-    l.lat !== undefined &&
-    l.lng !== undefined
-  );
+  return leads.filter((l) => {
+    // Potência: aceita `l.potencia` ou `PAC` vindo cru da API
+    const pot = toNumberBR((l as any).potencia ?? (l as any).PAC);
+    const hasPot = pot >= potenciaMinima;
+
+    // CNAE presente e não vazio
+    const hasCnae = !!l.cnae?.trim();
+
+    // Coordenadas: usa os nomes do seu tipo (latitude/longitude)
+    const lat = (l as any).latitude ?? (l as any).lat;
+    const lng = (l as any).longitude ?? (l as any).lng;
+    const hasCoords = lat != null && lng != null;
+
+    return hasPot && hasCnae && hasCoords;
+  });
 }
+

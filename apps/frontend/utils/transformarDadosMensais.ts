@@ -1,5 +1,5 @@
 import type { Lead } from '@/app/types/lead'
-function toNumberBR(v: any): number {
+export function toNumberBR(v: any): number {
   if (v == null) return 0;
   if (typeof v === 'number') return isFinite(v) ? v : 0;
   if (typeof v === 'string') {

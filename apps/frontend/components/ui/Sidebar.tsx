@@ -11,6 +11,11 @@ import {
 import { useState } from 'react';
 import { useSidebar } from '@/contexts/SidebarContext';
 
+type SidebarProps = {
+  onOpenDetective?: () => void; // <-- ADICIONE ESTA PROP
+};
+
+
 const mainLinks = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/mapa', label: 'Mapa interativo', icon: MapPinned },

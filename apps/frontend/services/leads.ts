@@ -11,10 +11,13 @@ const fetcherTop300 = async (): Promise<Lead[]> => {
   if (!res.ok) throw new Error('Erro ao carregar os leads detalhados')
 
   const raw = await res.json()
+  
+  console.log('[🐞 RAW lead 0]', raw[0])
 
   return raw.map((item: any) => {
     const cnae = item.cnae ?? item.CNAE
     return {
+      ...item,
       id: String(item.cod_id ?? item.COD_ID ?? item.id ?? ''),
       ucId: String(item.uc_id ?? item.UC_ID ?? ''),
       descricao: item.descricao ?? item.DESCR ?? null,

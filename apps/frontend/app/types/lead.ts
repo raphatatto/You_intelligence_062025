@@ -33,4 +33,9 @@ export type Lead = {
   receitaMunicipio?: string | null
   receitaUf?: string | null
   enrichedAt?: string | null
-}
+}  & {
+  [k: `ENE_${string}`]: number | string | null | undefined;
+  [k: `DEM_${string}`]: number | string | null | undefined;
+  [k: `DIC_${string}`]: number | string | null | undefined;
+  [k: `FIC_${string}`]: number | string | null | undefined;
+};
