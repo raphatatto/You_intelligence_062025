@@ -30,6 +30,6 @@ app.add_middleware(
 # 👇 aqui estão suas rotas registradas
 app.include_router(health_router, prefix="/v1")
 app.include_router(leads_router, prefix="/v1")
-app.include_router(analise_router, prefix="/v1")
+app.include_router(health_router, prefix="/v1")
 app.include_router(detetive_router)  # ✅ isso habilita a rota do modo detetive
 app.include_router(admin_routes.router)
