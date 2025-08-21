@@ -1,13 +1,12 @@
 'use client'
 
-import { useMemo, useState, ChangeEvent } from 'react'
+import { useMemo, useState } from 'react'
 import LeadsTable from '@/components/leads/LeadsTable'
 import FiltroDistribuidora from '@/components/leads/FiltroDistribuidora'
 import FiltroSegmento from '@/components/leads/FiltroSegmento'
 import { useFilters } from '@/store/filters'
 import { useSort } from '@/store/sort'
 import { useLeads } from '@/services/leads'
-import { CNAE_SEGMENTOS } from '@/utils/cnae'
 import { DISTRIBUIDORAS_MAP } from '@/utils/distribuidoras'
 import { stripDiacritics } from '@/utils/stripDiacritics'
 import { FileDown, Download, ChevronLeft, ChevronRight, Filter, Search, X } from 'lucide-react'
@@ -23,51 +22,75 @@ function exportarParaExcel(leadsParaExportar: Lead[], nomeArquivo = 'leads.xlsx'
   XLSX.writeFile(workbook, nomeArquivo)
 }
 
+/** Retorna sempre o CÓDIGO da distribuidora a partir do lead.
+ *  - Se o lead já vier com código conhecido (ex.: "63"), retorna o próprio.
+ *  - Se vier com nome ("CPFL Paulista"), faz reverse-map para achar o código.
+ */
+const getDistCodeFromLead = (l: { distribuidora?: string | null }) => {
+  const v = (l.distribuidora ?? '').toString().trim()
+  if (!v) return ''
+  if (v in DISTRIBUIDORAS_MAP) return v // já é código
+  const found = Object.entries(DISTRIBUIDORAS_MAP)
+    .find(([, name]) => name.toLowerCase() === v.toLowerCase())
+  return found?.[0] ?? ''
+}
+
 export default function LeadsPage() {
   const [pagina, setPagina] = useState(1)
   const [buscaInput, setBuscaInput] = useState('')
+
   const { estado, distribuidora, segmento, tipo, clearFilters, setEstado, setBusca, busca, setTipo } = useFilters()
   const { order, setOrder } = useSort()
   const { leads, isLoading, error } = useLeads()
 
-  const estados = useMemo<string[]>(() => {
-    return Array.from(new Set(leads.map((l) => l.estado).filter(Boolean))).sort()
+  // Estados únicos disponíveis
+  const estados = useMemo(() => {
+    const values = leads
+      .map(l => l.estado)
+      .filter((uf): uf is string => typeof uf === 'string' && uf.length > 0)
+    return Array.from(new Set(values)).sort()
   }, [leads])
 
   const leadsFiltrados = useMemo<Lead[]>(() => {
     let arr = [...leads]
 
     const filtroEstado = estado.trim().toLowerCase()
-    const filtroDistribuidora = distribuidora.trim()
+    const filtroDistribuidora = distribuidora.trim() // <- deve ser SEMPRE o CÓDIGO vindo do select
     const filtroSegmento = segmento.trim()
     const filtroTipo = tipo.trim()
 
     if (filtroEstado)
-      arr = arr.filter((l) => l.estado?.toLowerCase() === filtroEstado)
+      arr = arr.filter((l) => (l.estado ?? '').toLowerCase() === filtroEstado)
 
     if (filtroDistribuidora)
-      arr = arr.filter((l) => l.distribuidora === filtroDistribuidora)
+      arr = arr.filter((l) => getDistCodeFromLead(l) === filtroDistribuidora)
 
     if (filtroSegmento)
-      arr = arr.filter((l) => l.cnae === filtroSegmento)
+      arr = arr.filter((l) => (l.cnae ?? '') === filtroSegmento)
 
     if (filtroTipo)
-      arr = arr.filter((l) => l.tipo === filtroTipo)
+      arr = arr.filter((l) => (l.tipo ?? '') === filtroTipo)
 
     if (busca) {
       const term = stripDiacritics(busca.toLowerCase())
 
       arr = arr.filter((l) => {
-        const estado = stripDiacritics(l.estado?.toLowerCase() ?? '')
-        const cnae = stripDiacritics(l.cnae?.toLowerCase() ?? '')
-        const distribuidora = stripDiacritics(DISTRIBUIDORAS_MAP[l.distribuidora]?.toLowerCase() ?? '')
-        const segmentoNome = stripDiacritics(CNAE_SEGMENTOS[l.cnae]?.toLowerCase() ?? '')
-        const segmentoLead = stripDiacritics(l.segmento?.toLowerCase() ?? '')
+        const estado = stripDiacritics((l.estado ?? '').toLowerCase())
+        const cnae = stripDiacritics((l.cnae ?? '').toLowerCase())
+
+        // código e nome legível da distribuidora derivado do LEAD
+        const codDistrib = getDistCodeFromLead(l)
+        const distribCod = stripDiacritics(codDistrib.toLowerCase()) // ex.: "63"
+        const distribNome = stripDiacritics((DISTRIBUIDORAS_MAP[codDistrib]?.toLowerCase() ?? '')) // ex.: "cpfl paulista"
+
+        const segmentoNome = stripDiacritics((l.cnae ?? '').toLowerCase())
+        const segmentoLead = stripDiacritics((l.segmento ?? '').toLowerCase())
 
         return (
           estado.includes(term) ||
           cnae.includes(term) ||
-          distribuidora.includes(term) ||
+          distribCod.includes(term) ||     // permite buscar "63"
+          distribNome.includes(term) ||    // permite buscar "cpfl paulista"
           segmentoNome.includes(term) ||
           segmentoLead.includes(term)
         )
@@ -93,17 +116,21 @@ export default function LeadsPage() {
     if (p >= 1 && p <= totalPaginas) setPagina(p)
   }
 
-  if (isLoading) return (
-    <div className="flex items-center justify-center h-64">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-    </div>
-  )
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    )
+  }
 
-  if (error) return (
-    <div className="bg-red-900/20 border border-red-700 rounded-xl p-6 text-center">
-      <p className="text-red-400">Erro ao carregar leads: {error.message}</p>
-    </div>
-  )
+  if (error) {
+    return (
+      <div className="bg-red-900/20 border border-red-700 rounded-xl p-6 text-center">
+        <p className="text-red-400">Erro ao carregar leads: {error.message}</p>
+      </div>
+    )
+  }
 
   return (
     <section className="space-y-6 p-4 md:p-6">
@@ -115,7 +142,7 @@ export default function LeadsPage() {
             {leadsFiltrados.length} {leadsFiltrados.length === 1 ? 'lead encontrado' : 'leads encontrados'}
           </p>
         </div>
-        
+
         <div className="flex gap-2">
           <button
             onClick={() => exportarParaExcel(leadsPagina, 'leads-filtrados.xlsx')}
@@ -205,14 +232,14 @@ export default function LeadsPage() {
                 onKeyPress={(e) => e.key === 'Enter' && setBusca(buscaInput)}
                 className="w-full bg-zinc-800 text-sm text-white border border-zinc-700 px-3 py-2 pl-9 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-              <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-500" />
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
               {buscaInput && (
                 <button
                   onClick={() => {
                     setBuscaInput('')
                     setBusca('')
                   }}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
                 >
                   <X size={16} />
                 </button>
@@ -236,7 +263,7 @@ export default function LeadsPage() {
           <div className="text-sm text-zinc-400">
             Mostrando {inicio + 1}-{Math.min(fim, leadsFiltrados.length)} de {leadsFiltrados.length} leads
           </div>
-          
+
           <div className="flex items-center gap-2">
             <button
               onClick={() => irParaPagina(pagina - 1)}
@@ -249,15 +276,10 @@ export default function LeadsPage() {
             <div className="flex items-center gap-1">
               {Array.from({ length: Math.min(5, totalPaginas) }, (_, i) => {
                 let pageNum
-                if (totalPaginas <= 5) {
-                  pageNum = i + 1
-                } else if (pagina <= 3) {
-                  pageNum = i + 1
-                } else if (pagina >= totalPaginas - 2) {
-                  pageNum = totalPaginas - 4 + i
-                } else {
-                  pageNum = pagina - 2 + i
-                }
+                if (totalPaginas <= 5) pageNum = i + 1
+                else if (pagina <= 3) pageNum = i + 1
+                else if (pagina >= totalPaginas - 2) pageNum = totalPaginas - 4 + i
+                else pageNum = pagina - 2 + i
 
                 return (
                   <button

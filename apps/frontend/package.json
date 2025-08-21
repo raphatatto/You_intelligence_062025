@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.515.0",
@@ -19,6 +20,8 @@
     "react-map-gl": "^8.0.4",
     "recharts": "^2.15.3",
     "swr": "^2.3.3",
+    "tailwind-merge": "^2.0.0",
+    "tailwindcss-animate": "^1.0.7",
     "xlsx": "^0.18.5",
     "zustand": "^5.0.5"
   },
@@ -27,7 +30,7 @@
     "@tailwindcss/postcss": "^4",
     "@types/geojson": "^7946.0.16",
     "@types/mapbox-gl": "^3.4.1",
-    "@types/node": "^20",
+    "@types/node": "^20.19.11",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "autoprefixer": "^10.4.21",

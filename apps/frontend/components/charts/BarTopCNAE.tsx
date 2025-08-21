@@ -1,8 +1,9 @@
+// components/charts/BarTopCNAE.jsx
 'use client';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from 'recharts';
 import { CNAE_SEGMENTOS } from '@/utils/cnae';
 
-const COLORS = ['#facc15', '#fbbf24', '#f59e0b', '#d97706', '#b45309'];
+const COLORS = ['#22c55e', '#16a34a', '#15803d', '#166534', '#14532d', '#0f766e', '#22d3ee', '#06b6d4', '#0891b2'];
 
 export default function BarTopCNAE({ data }: { data: { nome: string; total: number }[] }) {
   const dataComDescricao = data.map((item) => ({
@@ -12,7 +13,7 @@ export default function BarTopCNAE({ data }: { data: { nome: string; total: numb
   }));
 
   return (
-    <div className="bg-zinc-900/50 border border-zinc-700 rounded-xl p-4 h-full">
+    <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-5 h-full">
       <h3 className="text-lg font-semibold text-white mb-1">Top Segmentos CNAE</h3>
       <p className="text-sm text-zinc-400 mb-4">Distribuição de leads por classificação CNAE</p>
       
@@ -20,7 +21,7 @@ export default function BarTopCNAE({ data }: { data: { nome: string; total: numb
         <BarChart
           layout="vertical"
           data={dataComDescricao}
-          margin={{ top: 5, right: 20, left: 120, bottom: 5 }}
+          margin={{ top: 5, right: 20, left: 2, bottom: 5 }}
           barSize={24}
         >
           <CartesianGrid 
@@ -38,7 +39,7 @@ export default function BarTopCNAE({ data }: { data: { nome: string; total: numb
           <YAxis 
             dataKey="codigo"
             type="category"
-            width={140}
+            width={110}
             tick={{ fill: '#E5E7EB', fontSize: 12 }}
             tickLine={false}
             axisLine={{ stroke: '#374151' }}
@@ -46,22 +47,22 @@ export default function BarTopCNAE({ data }: { data: { nome: string; total: numb
           <Tooltip
             contentStyle={{
               background: 'rgba(17, 24, 39, 0.95)',
-              borderColor: '#374151',
+              border: '1px solid rgba(34, 197, 94, 0.3)',
               borderRadius: '0.5rem',
               backdropFilter: 'blur(4px)',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.2)',
             }}
             formatter={(value: number) => [
-              <span key="value" className="text-yellow-400 font-bold">{value}</span>, 
+              <span key="value" className="text-green-400 font-bold">{value}</span>, 
               <span key="label" className="text-zinc-300">Leads</span>
             ]}
             labelFormatter={(label: string) => (
-              <div className="text-white font-medium">
+              <span className="text-white font-medium">
                 {CNAE_SEGMENTOS[label] || 'Segmento desconhecido'}
-                <div className="text-xs text-zinc-400 mt-1">CNAE: {label}</div>
-              </div>
+                <span className="text-xs text-zinc-400 mt-1">CNAE: {label}</span>
+              </span>
             )}
-            cursor={{ fill: 'rgba(255, 255, 255, 0.1)' }}
+            cursor={{ fill: 'rgba(34, 197, 94, 0.1)' }}
           />
           <Bar 
             dataKey="total" 

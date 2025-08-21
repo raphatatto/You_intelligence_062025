@@ -19,7 +19,7 @@ export default function ReportsList() {
     <div className="space-y-3">
       {reports.map((report) => (
         <div key={report.id} className="flex items-center justify-between bg-gray-800/50 rounded-lg p-4">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3">a
             <div className="p-2 rounded-lg bg-gray-700">
               <FileText className="text-blue-400" size={18} />
             </div>
