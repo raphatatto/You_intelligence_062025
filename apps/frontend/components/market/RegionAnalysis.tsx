@@ -41,7 +41,7 @@ export function RegionalAnalysis() {
   ]
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 text-white">
       {/* Cabeçalho */}
       <div className="flex items-center justify-between">
         <div>

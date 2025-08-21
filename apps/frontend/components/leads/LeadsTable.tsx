@@ -7,7 +7,7 @@ import { useSearchParams } from 'next/navigation'
 import { clsx } from 'clsx'
 import { DISTRIBUIDORAS_MAP } from '@/utils/distribuidoras'
 import { ChevronRight } from 'lucide-react'
-import { Tooltip } from '@/components/ui/Tooltip' // Assume you have a Tooltip component
+import { Tooltip } from '@/components/ui/Tooltip'
 
 type Props = {
   rows: Lead[]
@@ -17,6 +17,10 @@ export default function LeadsTable({ rows }: Props) {
   const router = useRouter()
   const params = useSearchParams()
   const selectedId = params?.get('id') ?? null
+  const getDistribuidoraLabel = (cod?: string | null) => {
+  if (!cod) return '—';
+  return (DISTRIBUIDORAS_MAP as Record<string, string>)[cod] ?? cod;
+};
 
   useEffect(() => {
     if (selectedId) {
@@ -108,11 +112,11 @@ export default function LeadsTable({ rows }: Props) {
                 </td>
                 
                 <td className="px-4 py-3">
-                  <Tooltip content={DISTRIBUIDORAS_MAP[lead.distribuidora] || lead.distribuidora || '—'}>
-                    <div className="max-w-[180px] truncate text-zinc-300">
-                      {DISTRIBUIDORAS_MAP[lead.distribuidora] ?? lead.distribuidora ?? '—'}
-                    </div>
-                  </Tooltip>
+                <Tooltip content={getDistribuidoraLabel(lead.distribuidora)}>
+                  <div className="max-w-[180px] truncate text-zinc-300">
+                    {getDistribuidoraLabel(lead.distribuidora)}
+                  </div>
+                </Tooltip>
                 </td>
                 
                 <td className="px-4 py-3">

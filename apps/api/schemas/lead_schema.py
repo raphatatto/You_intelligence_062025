@@ -1,3 +1,7 @@
+from typing import Optional, List, Dict
+from pydantic import BaseModel, ConfigDict
+from datetime import datetime
+
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 from datetime import datetime, date
@@ -31,71 +35,6 @@ class LeadList(BaseModel):
     total: int
     items: List[LeadOut]
 
-
-# -------------------------------
-# 📋 Schema detalhado (backend)
-# -------------------------------
-
-class LeadDetalhado(BaseModel):
-    id: str
-    uc_id: str
-    cod_id: Optional[str]
-    import_id: Optional[str]
-    distribuidora_id: Optional[int]
-    distribuidora_nome: Optional[str]
-    origem: Optional[str]
-    ano: Optional[int]
-    status: Optional[str]
-    data_conexao: Optional[date]
-    grupo_tensao: Optional[str]
-    modalidade: Optional[str]
-    tipo_sistema: Optional[str]
-    situacao: Optional[str]
-    classe: Optional[str]
-    cnae: Optional[str]
-    municipio_id: Optional[int]
-    municipio: Optional[str]
-    estado: Optional[str]
-    bairro: Optional[str]
-    cep: Optional[str]
-    pac: Optional[float]
-    pn_con: Optional[str]
-    descricao: Optional[str]
-    latitude: Optional[float]
-    longitude: Optional[float]
-    created_at: Optional[datetime]
-    updated_at: Optional[datetime]
-
-    cnae_descricao: Optional[str]
-    segmento_desc: Optional[str]
-    distribuidora_nome: Optional[str]
-    cnpj: Optional[str]
-    nome_fantasia: Optional[str]
-    razao_social: Optional[str]
-    telefone: Optional[str]
-    email: Optional[str]
-    site: Optional[str]
-    receita_situacao: Optional[str]
-    receita_abertura: Optional[str]
-    receita_natureza: Optional[str]
-    receita_porte: Optional[str]
-    receita_capital_social: Optional[float]
-    receita_atividade_principal: Optional[str]
-    receita_municipio: Optional[str]
-    receita_uf: Optional[str]
-    enriched_at: Optional[datetime]
-
-    media_dic: Optional[float]
-    media_fic: Optional[float]
-    soma_horas_sem_rede: Optional[float]
-
-    media_energia_total: Optional[float]
-    media_energia_ponta: Optional[float]
-    media_energia_fora: Optional[float]
-
-    media_demanda_total: Optional[float]
-    media_demanda_ponta: Optional[float]
-    media_demanda_fora: Optional[float]
 
 
 # -------------------------------
@@ -158,6 +97,57 @@ class ImportStatusOut(BaseModel):
     camada: str
     status: str
     data_execucao: datetime
+
+class LeadDetalhadoOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    uc_id: str
+    import_id: Optional[str] = None
+    cod_id: Optional[str] = None
+    distribuidora_id: Optional[int] = None
+    origem: Optional[str] = None
+    ano: Optional[int] = None
+    status: Optional[str] = None
+    data_conexao: Optional[datetime] = None
+    grupo_tensao: Optional[str] = None
+    modalidade: Optional[str] = None
+    tipo_sistema: Optional[str] = None
+    situacao: Optional[str] = None
+    classe: Optional[str] = None
+    cnae: Optional[str] = None
+    municipio_id: Optional[int] = None
+    municipio: Optional[str] = None
+    estado:Optional[str]
+    bairro: Optional[str] = None
+    cep: Optional[str] = None
+    pac: Optional[float] = None
+    pn_con: Optional[str] = None
+    descricao: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    distribuidora_nome: Optional[str] = None
+    cnae_descricao: Optional[str] = None
+    segmento_desc: Optional[str] = None
+    cnpj:Optional[str] = None
+    nome_fantasia:Optional[str] = None
+    razao_social:Optional[str] = None
+    telefone:Optional[str] = None
+    email:Optional[str] = None
+    site:Optional[str] = None
+    receita_situacao:Optional[str] = None
+    receita_abertura:Optional[str] = None
+    receita_natureza:Optional[str] = None
+    receita_porte:Optional[str] = None
+    receita_capital_social:Optional[str] = None
+    receita_atividade_principal:Optional[str] = None
+    receita_municipio:Optional[str] = None
+    receita_uf:Optional[str] = None
+    enriched_at:Optional[str] = None
+    media_dic:Optional[float] = None
+    soma_horas_sem_rede:Optional[datetime] = None
+    media_energia_total:Optional[float] = None
+    media_demanda_ponta: Optional[float] = None
+    media_demanda_fora: Optional[float] = None
 
 
 

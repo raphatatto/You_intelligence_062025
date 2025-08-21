@@ -7,9 +7,14 @@ import { clsx } from 'clsx';
 import { 
   Home, MapPinned, BarChart2, MapIcon, LayoutDashboard,
   ChevronRight, Settings, User, LogOut, Search, Globe, 
-  Zap, AlertCircle, TrendingUp, FileText, Bell, Bot} from 'lucide-react';
+  Zap, AlertCircle, TrendingUp, FileText, Bell, Bot, GitGraph} from 'lucide-react';
 import { useState } from 'react';
 import { useSidebar } from '@/contexts/SidebarContext';
+
+type SidebarProps = {
+  onOpenDetective?: () => void; // <-- ADICIONE ESTA PROP
+};
+
 
 const mainLinks = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -19,6 +24,7 @@ const mainLinks = [
   { href: '/detetive', label: 'Detetive', icon: Search },
   { href: '/noticias', label: 'Notícias', icon: Bell },
   { href: '/youknow', label: 'YouKnow', icon: Bot },
+  //{ href: '/analise-de-mercado', label: 'Análise de Mercado', icon: GitGraph },
 ];
 
 const detectiveFeatures = [
@@ -79,7 +85,7 @@ export default function Sidebar() {
         ))}
 
         {/* Seção Detetive */}
-        <div className="mt-6">
+        {/* <div className="mt-6">
           <button
             onClick={() => setDetectiveExpanded(!detectiveExpanded)}
             className={clsx(
@@ -127,7 +133,7 @@ export default function Sidebar() {
               ))}
             </div>
           )}
-        </div>
+        </div> */}
       </nav>
 
       {/* Área do usuário */}

@@ -3,9 +3,9 @@
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { MapPin, ChevronRight, Info, Crosshair } from 'lucide-react'
-import { Lead } from '@/app/types/lead'
+import type { Lead } from '@/app/types/lead'
 import { useRouter } from 'next/navigation'
-import { MapRef } from 'react-map-gl/maplibre'
+import type { MapRef } from 'react-map-gl/maplibre'
 import { useEffect, useRef, useState } from 'react'
 import { clsx } from 'clsx'
 import Map, { Marker, Popup, NavigationControl, GeolocateControl } from 'react-map-gl/maplibre'
@@ -19,6 +19,13 @@ const MAP_STYLE = 'https://tiles.stadiamaps.com/styles/alidade_smooth_dark.json'
 
 type LeadComCoords = Lead & { lat: number; lng: number }
 
+function toNumber(v: unknown) {
+  if (v == null) return NaN
+  const s = String(v).trim().replace(',', '.') // trata "-23,55"
+  const n = Number(s)
+  return Number.isFinite(n) ? n : NaN
+}
+
 export default function MapView({ leads, selectedId }: Props) {
   const [pontos, setPontos] = useState<LeadComCoords[]>([])
   const [selecionado, setSelecionado] = useState<LeadComCoords | null>(null)
@@ -26,38 +33,39 @@ export default function MapView({ leads, selectedId }: Props) {
   const mapRef = useRef<MapRef>(null)
   const router = useRouter()
 
+  // Monta os pontos a partir de latitude/longitude da API (sem depender de CEP)
   useEffect(() => {
-    async function carregarPontos() {
-      setLoading(true)
-      
-      const leadsValidos = leads.filter((l) => !!l.cep)
-      const pontos: LeadComCoords[] = leadsValidos
-        .filter((l) => l.latitude !== undefined && l.longitude !== undefined)
-        .map((l) => ({ 
-          ...l, 
-          lat: Number(l.latitude), 
-          lng: Number(l.longitude),
-        }))
+    setLoading(true)
 
-      setPontos(pontos)
-      setLoading(false)
+    const pts: LeadComCoords[] = (leads ?? [])
+      .map((l) => {
+        const lat = toNumber(l.latitude as any)
+        const lng = toNumber(l.longitude as any)
+        return { ...l, lat, lng }
+      })
+      .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng))
 
-      // Se houver um lead selecionado, centraliza o mapa nele
-      if (selectedId) {
-        const leadSelecionado = pontos.find(l => l.id === selectedId)
-        if (leadSelecionado) {
-          setTimeout(() => {
-            mapRef.current?.flyTo({
-              center: [leadSelecionado.lng, leadSelecionado.lat],
-              zoom: 14
-            })
-          }, 500)
-        }
-      }
+    setPontos(pts)
+    setLoading(false)
+
+    // (Opcional) Enquadra todos os pontos ao montar
+    if (pts.length > 1 && mapRef.current) {
+      const lons = pts.map((p) => p.lng)
+      const lats = pts.map((p) => p.lat)
+      const minX = Math.min(...lons), maxX = Math.max(...lons)
+      const minY = Math.min(...lats), maxY = Math.max(...lats)
+      mapRef.current.fitBounds([[minX, minY], [maxX, maxY]], { padding: 40, duration: 500 })
     }
+  }, [leads])
 
-    carregarPontos()
-  }, [leads, selectedId])
+  // Centraliza/realça quando selectedId mudar
+  useEffect(() => {
+    if (!selectedId || !mapRef.current) return
+    const p = pontos.find((x) => x.id === selectedId)
+    if (!p) return
+    mapRef.current.flyTo({ center: [p.lng, p.lat], zoom: 14 })
+    setSelecionado(p)
+  }, [selectedId, pontos])
 
   if (loading) {
     return (
@@ -80,16 +88,16 @@ export default function MapView({ leads, selectedId }: Props) {
         style={{ width: '100%', height: '100%' }}
         attributionControl={false}
       >
-        <NavigationControl 
-          position="top-left" 
+        <NavigationControl
+          position="top-left"
           showCompass={false}
           visualizePitch={false}
         />
-        
+
         <GeolocateControl
           position="top-left"
-          trackUserLocation={true}
-          showUserLocation={true}
+          trackUserLocation
+          showUserLocation
           showAccuracyCircle={false}
           style={{ marginTop: '50px' }}
         />
@@ -111,8 +119,8 @@ export default function MapView({ leads, selectedId }: Props) {
                 <MapPin
                   className={clsx(
                     'w-7 h-7 drop-shadow-lg transition-all',
-                    l.id === selectedId 
-                      ? 'text-lime-400 fill-lime-400 scale-125' 
+                    l.id === selectedId
+                      ? 'text-lime-400 fill-lime-400 scale-125'
                       : 'text-red-500 fill-red-500 hover:fill-red-400 hover:text-red-400'
                   )}
                 />
@@ -140,27 +148,27 @@ export default function MapView({ leads, selectedId }: Props) {
               <h3 className="font-bold text-gray-900 truncate">
                 {selecionado.descricao || 'Lead sem nome'}
               </h3>
-              
+
               <div className="mt-2 space-y-1 text-sm text-gray-700">
                 <div className="flex items-start">
                   <Info className="w-4 h-4 mr-2 mt-0.5 text-gray-500 flex-shrink-0" />
                   <div>
-                    <p className="font-medium">DIC: <span className="font-normal">{selecionado.dicMed || 'N/A'}</span></p>
-                    <p className="font-medium">FIC: <span className="font-normal">{selecionado.ficMed || 'N/A'}</span></p>
+                    <p className="font-medium">DIC: <span className="font-normal">{selecionado.dicMed ?? 'N/A'}</span></p>
+                    <p className="font-medium">FIC: <span className="font-normal">{selecionado.ficMed ?? 'N/A'}</span></p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start">
                   <Crosshair className="w-4 h-4 mr-2 mt-0.5 text-gray-500 flex-shrink-0" />
                   <div>
-                    <p className="font-medium">CNAE: <span className="font-normal">{selecionado.cnae || 'N/A'}</span></p>
-                    <p className="font-medium">Estado: <span className="font-normal">{selecionado.estado || 'N/A'}</span></p>
+                    <p className="font-medium">CNAE: <span className="font-normal">{selecionado.cnae ?? 'N/A'}</span></p>
+                    <p className="font-medium">Estado: <span className="font-normal">{selecionado.estado ?? 'N/A'}</span></p>
                   </div>
                 </div>
-                
-                <p className="font-medium">Distribuidora: <span className="font-normal">{selecionado.distribuidora || 'N/A'}</span></p>
+
+                <p className="font-medium">Distribuidora: <span className="font-normal">{selecionado.distribuidora ?? 'N/A'}</span></p>
               </div>
-              
+
               <button
                 onClick={() => router.push(`/leads?id=${selecionado.id}`)}
                 className="mt-3 w-full flex items-center justify-between px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-md transition-colors"

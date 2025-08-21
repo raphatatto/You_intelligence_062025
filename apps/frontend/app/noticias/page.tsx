@@ -71,7 +71,7 @@ export default function NoticiasPage() {
     <section className="container mx-auto px-4 py-12">
       <div className="max-w-6xl mx-auto">
         <div className="mb-12 text-center">
-          <h1 className="text-4xl font-bold text-white mb-3">Clipping de Energia & Mercado</h1>
+          <h1 className="text-4xl font-bold text-white mb-3">Notícias de Energia</h1>
           <p className="text-lg text-gray-300 max-w-2xl mx-auto">
             Fique atualizado com as principais notícias do setor energético
           </p>
