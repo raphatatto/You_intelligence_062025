@@ -19,7 +19,7 @@ from packages.jobs.queue import dequeue, complete, fail, WORKER_POLL_SEC
 
 # download helper
 try:
-    from packages.jobs.download_gdb import baixar_gdb
+    from packages.jobs.download.download_gdb import baixar_gdb
 except Exception:
     baixar_gdb = None  # opcional
 
