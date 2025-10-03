@@ -116,7 +116,7 @@ export default function DetectiveSidebarPanel({ onClose }: { onClose: () => void
               </div>
             </div>
 
-            {/* Botão de busca */}
+           
             <button
               onClick={handleSearch}
               disabled={isSearching || !searchTerm.trim()}
