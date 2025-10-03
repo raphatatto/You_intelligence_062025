@@ -1,6 +1,7 @@
 // components/detective/SidebarPanel.tsx
 'use client'
 
+import { set } from 'date-fns'
 import { 
   Search, Building, MapPin, X, 
   User, Mail, Phone, Zap, AlertCircle,
@@ -15,82 +16,30 @@ export default function DetectiveSidebarPanel({ onClose }: { onClose: () => void
   const [isSearching, setIsSearching] = useState(false)
   const [activeTab, setActiveTab] = useState<'search' | 'history'>('search')
 
-  // Simulação de busca na base de dados
-  const handleSearch = () => {
-    if (!searchTerm.trim()) return
-    
-    setIsSearching(true)
-    
-    // Simulando uma busca assíncrona
-    setTimeout(() => {
-      // Dados mockados para demonstração
-      const mockResults = [
-        {
-          id: 1,
-          cnpj: '12.345.678/0001-90',
-          razaoSocial: 'Empresa Exemplo Ltda',
-          nomeFantasia: 'Exemplo Energia',
-          endereco: 'Rua das Flores, 123 - São Paulo/SP',
-          consumoMedio: 15000,
-          demandaContratada: 200,
-          distribuidora: 'Enel',
-          submercado: 'Sudeste',
-          ultimaAtualizacao: '2023-10-15',
-          contato: {
-            nome: 'Carlos Silva',
-            email: 'carlos@exemplo.com',
-            telefone: '(11) 99999-9999'
-          },
-          historicoConsumo: [
-            { mes: 'Jan/2023', consumo: 14200 },
-            { mes: 'Fev/2023', consumo: 14800 },
-            { mes: 'Mar/2023', consumo: 15300 },
-            { mes: 'Abr/2023', consumo: 14900 },
-            { mes: 'Mai/2023', consumo: 15600 },
-            { mes: 'Jun/2023', consumo: 16200 }
-          ]
+  const handleSearch = async () => {
+    try{
+      setIsSearching(true)
+      setSearchResults([])
+      setSelectedLead(null)
+      const response = await fetch ('v1/consulta',{
+        method: 'POST',
+        headers:{
+          'Content-Type': 'application/json',
         },
-        {
-          id: 2,
-          cnpj: '98.765.432/0001-10',
-          razaoSocial: 'Comércio de Energia SA',
-          nomeFantasia: 'Comércio Energ',
-          endereco: 'Av. Paulista, 1000 - São Paulo/SP',
-          consumoMedio: 25000,
-          demandaContratada: 350,
-          distribuidora: 'CPFL',
-          submercado: 'Sudeste',
-          ultimaAtualizacao: '2023-09-20',
-          contato: {
-            nome: 'Ana Santos',
-            email: 'ana.santos@comercioenerg.com',
-            telefone: '(11) 98888-8888'
-          }
-        },
-        {
-          id: 3,
-          cnpj: '55.444.333/0001-22',
-          razaoSocial: 'Indústria Sustentável ME',
-          nomeFantasia: 'Indústria Sustentável',
-          endereco: 'Rua Industrial, 456 - Campinas/SP',
-          consumoMedio: 38000,
-          demandaContratada: 500,
-          distribuidora: 'CPFL',
-          submercado: 'Sudeste',
-          ultimaAtualizacao: '2023-11-05',
-          contato: {
-            nome: 'Roberto Lima',
-            email: 'roberto.lima@industriasustentavel.com',
-            telefone: '(19) 97777-7777'
-          }
-        }
-      ]
-      
-      setSearchResults(mockResults)
+        body: JSON.stringify({cnpj: searchTerm}),
+      })
+      if (!response.ok){
+        throw new Error('Erro na requisição')
+      }
+      const data = await response.json()
+      setSearchResults(data)
+    } catch (error){
+      console.error('Erro ao buscar dados:', error)
+    } finally{
       setIsSearching(false)
-    }, 1500)
+    }
+    
   }
-
   const handleSelectLead = (lead: any) => {
     setSelectedLead(lead)
   }
@@ -379,4 +328,4 @@ export default function DetectiveSidebarPanel({ onClose }: { onClose: () => void
       </div>
     </div>
   )
-}
+  }
